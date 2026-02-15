@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Lunch Bunch</title>
+<meta name="theme-color" content="#1a1a1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lunch Bunch">
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --primary: #bf5700;
+    --primary-dark: #994600;
+    --dark-steel: #2c2c2c;
+    --medium-gray: #4a4a4a;
+    --near-black: #1a1a1a;
+    --text: #f5e6d0;
+    --text-muted: #a0a0a0;
+    --accent-gold: #c4841d;
+    --success: #4adb7b;
+    --danger: #e74c3c;
+  }
+
+  body {
+    background: linear-gradient(180deg, #1a1a1a 0%, #2c2c2c 100%);
+    font-family: 'Source Sans 3', sans-serif;
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .phone-frame {
+    width: 375px;
+    height: 812px;
+    background: var(--near-black);
+    border-radius: 40px;
+    border: 3px solid var(--medium-gray);
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  @media (max-width: 430px) {
+    body { padding: 0; background: var(--near-black); }
+    .phone-frame {
+      width: 100%; height: 100vh; height: 100dvh;
+      border-radius: 0; border: none; box-shadow: none;
+    }
+  }
+
+  .screen {
+    display: none;
+    height: 100%;
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    flex-direction: column;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    overflow: hidden;
+  }
+  .screen.active { display: flex; opacity: 1; }
+
+  /* ===== SPLASH ===== */
+  #splashScreen {
+    background: radial-gradient(ellipse at center, #2c2c2c 0%, #1a1a1a 60%, #111 100%);
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+  }
+
+  .splash-icon {
+    font-size: 80px;
+    animation: pulse-glow 1.5s ease-in-out infinite;
+    margin-bottom: 20px;
+    filter: drop-shadow(0 0 20px rgba(191,87,0,0.6));
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.15); opacity: 1; }
+  }
+
+  .splash-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  }
+
+  .splash-subtitle {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-top: 8px;
+  }
+
+  .splash-loader {
+    margin-top: 30px;
+    width: 120px;
+    height: 3px;
+    background: #333;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .splash-loader-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--primary), var(--accent-gold));
+    border-radius: 2px;
+    animation: load-bar 1.8s ease-in-out forwards;
+  }
+
+  @keyframes load-bar {
+    0% { width: 0%; }
+    60% { width: 80%; }
+    100% { width: 100%; }
+  }
+
+  /* ===== LOGIN ===== */
+  #loginScreen {
+    justify-content: center;
+    align-items: center;
+    padding: 40px 24px;
+    background: radial-gradient(ellipse at 50% 30%, #2c2c2c 0%, #1a1a1a 60%, #111 100%);
+    overflow-y: auto;
+  }
+
+  .login-logo { font-size: 64px; margin-bottom: 12px; filter: drop-shadow(0 0 16px rgba(191,87,0,0.5)); }
+
+  .login-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 4px;
+  }
+
+  .login-tagline {
+    font-size: 12px;
+    color: var(--text-muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+  }
+
+  .login-btn {
+    width: 100%;
+    max-width: 300px;
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid var(--medium-gray);
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 15px;
+    cursor: pointer;
+    margin-bottom: 12px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 48px;
+  }
+  .login-btn:hover { transform: translateY(-1px); }
+
+  .login-btn-google { background: #fff; color: #1a1a1a; border-color: #666; }
+  .login-btn-google:hover { background: #f5f5f5; }
+
+  .login-btn-email { background: transparent; color: var(--accent-gold); border-color: var(--medium-gray); }
+  .login-btn-email:hover { border-color: var(--primary); }
+
+  .login-divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 16px 0; width: 100%; max-width: 300px;
+    color: var(--medium-gray); font-size: 11px;
+  }
+  .login-divider::before, .login-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--medium-gray);
+  }
+
+  .login-form { width: 100%; max-width: 300px; display: none; }
+  .login-form.show { display: block; }
+
+  .login-input {
+    width: 100%; padding: 12px 14px; border-radius: 10px;
+    border: 1px solid #333; background: rgba(0,0,0,0.4);
+    color: var(--text); font-family: 'Source Sans 3', sans-serif;
+    font-size: 14px; margin-bottom: 10px; outline: none;
+    transition: border-color 0.2s;
+  }
+  .login-input:focus { border-color: var(--primary); }
+  .login-input::placeholder { color: #666; }
+
+  .login-submit {
+    width: 100%; padding: 14px; border-radius: 12px; border: none;
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+    color: #fff; font-family: 'Oswald', sans-serif; font-size: 16px;
+    font-weight: 600; text-transform: uppercase; letter-spacing: 2px;
+    cursor: pointer; margin-top: 4px; transition: all 0.2s; min-height: 48px;
+  }
+  .login-submit:hover { transform: translateY(-1px); filter: brightness(1.1); }
+
+  .login-error {
+    color: var(--danger); font-size: 13px; margin-top: 8px;
+    text-align: center; min-height: 20px;
+  }
+
+  .login-toggle {
+    color: var(--text-muted); font-size: 13px; margin-top: 12px;
+    cursor: pointer; text-decoration: underline;
+  }
+
+  /* ===== GROUP SELECT ===== */
+  #groupScreen {
+    justify-content: center;
+    align-items: center;
+    padding: 40px 24px;
+    background: linear-gradient(180deg, #1a1a1a, #2c2c2c);
+  }
+
+  .group-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 22px; font-weight: 600;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 24px;
+  }
+
+  .group-select {
+    width: 100%; max-width: 300px; padding: 14px;
+    border-radius: 12px; border: 1px solid var(--medium-gray);
+    background: rgba(0,0,0,0.4); color: var(--text);
+    font-family: 'Source Sans 3', sans-serif; font-size: 15px;
+    margin-bottom: 16px; outline: none; cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+  }
+
+  .group-join-btn {
+    width: 100%; max-width: 300px; padding: 14px;
+    border-radius: 12px; border: none;
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+    color: #fff; font-family: 'Oswald', sans-serif; font-size: 16px;
+    font-weight: 600; text-transform: uppercase; letter-spacing: 2px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .group-join-btn:hover { transform: translateY(-1px); filter: brightness(1.1); }
+
+  /* ===== VOTING SCREEN ===== */
+  #votingScreen {
+    background: linear-gradient(180deg, #1a1a1a, #222);
+  }
+
+  .voting-header {
+    text-align: center;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 10px;
+    background: linear-gradient(180deg, rgba(44,44,44,0.95), rgba(26,26,26,0.9));
+    border-bottom: 2px solid var(--primary);
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .voting-header-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 20px; font-weight: 700;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .voting-header-date {
+    font-size: 12px; color: var(--text-muted);
+    letter-spacing: 1px; margin-top: 2px;
+  }
+
+  .voting-header-status {
+    font-size: 11px; margin-top: 4px;
+    letter-spacing: 1px; text-transform: uppercase;
+  }
+  .voting-header-status.open { color: var(--success); }
+  .voting-header-status.closed { color: var(--danger); }
+
+  .voting-logout {
+    position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); right: 16px;
+    background: none; border: none; color: var(--text-muted);
+    font-size: 12px; cursor: pointer; padding: 4px 8px;
+    font-family: 'Source Sans 3', sans-serif;
+  }
+  .voting-logout:hover { color: var(--text); }
+
+  .voting-tabs {
+    display: flex; flex-shrink: 0;
+    border-bottom: 1px solid #333;
+    background: rgba(0,0,0,0.3);
+  }
+
+  .voting-tab {
+    flex: 1; padding: 10px; text-align: center;
+    font-family: 'Oswald', sans-serif; font-size: 14px;
+    text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text-muted); cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .voting-tab.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+  }
+
+  .voting-content {
+    flex: 1; overflow-y: auto; padding: 16px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Restaurant grid */
+  .restaurant-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .restaurant-btn {
+    padding: 16px 10px;
+    border-radius: 12px;
+    border: 2px solid #333;
+    background: rgba(255,255,255,0.03);
+    color: var(--text);
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    position: relative;
+    min-height: 70px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .restaurant-btn:hover { border-color: var(--primary); transform: translateY(-1px); }
+  .restaurant-btn:active { transform: scale(0.97); }
+
+  .restaurant-btn.voted {
+    border-color: var(--primary);
+    background: rgba(191,87,0,0.15);
+    box-shadow: 0 0 12px rgba(191,87,0,0.2);
+  }
+
+  .restaurant-btn.dimmed {
+    opacity: 0.5;
+  }
+
+  .restaurant-btn .vote-count {
+    font-size: 20px; font-weight: 700;
+    font-family: 'Oswald', sans-serif;
+    color: var(--accent-gold);
+  }
+
+  .restaurant-btn .restaurant-name {
+    font-size: 12px;
+    line-height: 1.2;
+    color: var(--text-muted);
+  }
+
+  .restaurant-btn.voted .restaurant-name { color: var(--text); }
+
+  .add-restaurant-btn {
+    grid-column: 1 / -1;
+    padding: 12px;
+    border-radius: 12px;
+    border: 2px dashed #444;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .add-restaurant-btn:hover { border-color: var(--primary); color: var(--text); }
+
+  .add-restaurant-form {
+    display: none;
+    grid-column: 1 / -1;
+    gap: 8px;
+  }
+  .add-restaurant-form.show { display: flex; }
+
+  .add-restaurant-form input {
+    flex: 1; padding: 10px 12px; border-radius: 8px;
+    border: 1px solid #444; background: rgba(0,0,0,0.3);
+    color: var(--text); font-family: 'Source Sans 3', sans-serif;
+    font-size: 14px; outline: none;
+  }
+  .add-restaurant-form input:focus { border-color: var(--primary); }
+
+  .add-restaurant-form button {
+    padding: 10px 16px; border-radius: 8px; border: none;
+    background: var(--primary); color: #fff;
+    font-family: 'Oswald', sans-serif; font-size: 14px;
+    text-transform: uppercase; cursor: pointer;
+  }
+
+  /* Winner display */
+  .winner-display {
+    text-align: center;
+    padding: 30px 20px;
+    margin-bottom: 20px;
+  }
+
+  .winner-trophy { font-size: 64px; margin-bottom: 12px; }
+
+  .winner-label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 14px; color: var(--accent-gold);
+    text-transform: uppercase; letter-spacing: 3px;
+    margin-bottom: 4px;
+  }
+
+  .winner-name {
+    font-family: 'Oswald', sans-serif;
+    font-size: 28px; font-weight: 700;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .winner-votes {
+    font-size: 14px; color: var(--text-muted); margin-top: 4px;
+  }
+
+  /* Bar chart */
+  .results-chart {
+    margin-top: 16px;
+  }
+
+  .results-chart-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 14px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+
+  .chart-bar-row {
+    display: flex; align-items: center; margin-bottom: 8px; gap: 10px;
+  }
+
+  .chart-bar-label {
+    width: 100px; font-size: 12px; color: var(--text-muted);
+    text-align: right; flex-shrink: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  .chart-bar-track {
+    flex: 1; height: 24px; background: rgba(255,255,255,0.05);
+    border-radius: 4px; overflow: hidden; position: relative;
+  }
+
+  .chart-bar-fill {
+    height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent-gold));
+    border-radius: 4px; transition: width 0.5s ease;
+    min-width: 2px;
+  }
+
+  .chart-bar-count {
+    width: 30px; font-size: 14px; font-weight: 700;
+    font-family: 'Oswald', sans-serif; color: var(--text);
+    flex-shrink: 0;
+  }
+
+  /* History */
+  .history-list { list-style: none; }
+
+  .history-item {
+    padding: 12px 14px; margin-bottom: 8px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 10px; border: 1px solid #333;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+
+  .history-date {
+    font-size: 12px; color: var(--text-muted);
+  }
+
+  .history-winner {
+    font-family: 'Oswald', sans-serif;
+    font-size: 15px; color: var(--primary);
+    font-weight: 600;
+  }
+
+  .no-votes-msg {
+    text-align: center; color: var(--text-muted);
+    padding: 40px 20px; font-size: 15px;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    background: rgba(44,44,44,0.95); color: var(--text);
+    padding: 12px 24px; border-radius: 10px;
+    font-size: 14px; z-index: 9999;
+    opacity: 0; transition: opacity 0.3s;
+    pointer-events: none; border: 1px solid #555;
+    max-width: 90%;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="phone-frame">
+
+  <!-- SPLASH -->
+  <div id="splashScreen" class="screen active">
+    <div class="splash-icon">🍔</div>
+    <div class="splash-title">Lunch Bunch</div>
+    <div class="splash-subtitle">Where are we eating?</div>
+    <div class="splash-loader"><div class="splash-loader-fill"></div></div>
+  </div>
+
+  <!-- LOGIN -->
+  <div id="loginScreen" class="screen">
+    <div class="login-logo">🍔</div>
+    <div class="login-title">Lunch Bunch</div>
+    <div class="login-tagline">Vote • Eat • Repeat</div>
+
+    <button class="login-btn login-btn-google" onclick="googleSignIn()">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Sign in with Google
+    </button>
+
+    <button class="login-btn login-btn-email" onclick="toggleEmailForm()">
+      ✉️ Sign in with Email
+    </button>
+
+    <div class="login-divider">or</div>
+
+    <div id="emailForm" class="login-form">
+      <input type="email" id="loginEmail" class="login-input" placeholder="Email address">
+      <input type="password" id="loginPassword" class="login-input" placeholder="Password">
+      <button class="login-submit" onclick="emailSignIn()">Sign In</button>
+      <div id="loginError" class="login-error"></div>
+      <div class="login-toggle" onclick="toggleSignUpMode()"><span id="toggleText">Don't have an account? Sign up</span></div>
+    </div>
+  </div>
+
+  <!-- GROUP SELECT -->
+  <div id="groupScreen" class="screen">
+    <div class="group-title">Select Your Group</div>
+    <select id="groupSelect" class="group-select">
+      <option value="pge-lunchbox">PGE Lunchbox</option>
+    </select>
+    <button class="group-join-btn" onclick="joinGroup()">Join Group</button>
+  </div>
+
+  <!-- VOTING -->
+  <div id="votingScreen" class="screen">
+    <div class="voting-header">
+      <div class="voting-header-title" id="groupNameDisplay">PGE Lunchbox</div>
+      <div class="voting-header-date" id="dateDisplay"></div>
+      <div class="voting-header-status" id="statusDisplay"></div>
+      <button class="voting-logout" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="voting-tabs">
+      <div class="voting-tab active" onclick="switchTab('vote')" id="tabVote">Vote</div>
+      <div class="voting-tab" onclick="switchTab('history')" id="tabHistory">History</div>
+    </div>
+
+    <div class="voting-content" id="votingContent">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+// ===== FIREBASE INIT =====
+firebase.initializeApp({
+  apiKey: "AIzaSyASukqVBonypnEsr187Byd_DNdZdVuJRAA",
+  authDomain: "lunch-bunch-jf.firebaseapp.com",
+  projectId: "lunch-bunch-jf",
+  storageBucket: "lunch-bunch-jf.firebasestorage.app",
+  messagingSenderId: "434669680174",
+  appId: "1:434669680174:web:731c4756e4226bf4b951bf"
+});
+
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+// ===== STATE =====
+let currentUser = null;
+let currentGroup = null;
+let restaurants = [];
+let userVote = null;
+let voteCounts = {};
+let ballotUnsubscribe = null;
+let isSignUpMode = false;
+let currentTab = 'vote';
+
+// ===== HELPERS =====
+function getCSTDate() {
+  const now = new Date();
+  const cst = new Date(now.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+  return cst;
+}
+
+function getCSTDateString() {
+  const d = getCSTDate();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function isBeforeNoon() {
+  return getCSTDate().getHours() < 12;
+}
+
+function formatDate(dateStr) {
+  const [y, m, d] = dateStr.split('-');
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${months[parseInt(m)-1]} ${parseInt(d)}, ${y}`;
+}
+
+function showToast(msg, duration = 3000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+// ===== SCREEN NAV =====
+function navigateToScreen(screenId) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(screenId).classList.add('active');
+}
+
+// ===== AUTH =====
+function googleSignIn() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(err => {
+    showToast('Google sign-in failed: ' + err.message);
+  });
+}
+
+function toggleEmailForm() {
+  document.getElementById('emailForm').classList.toggle('show');
+}
+
+function toggleSignUpMode() {
+  isSignUpMode = !isSignUpMode;
+  document.getElementById('toggleText').textContent = isSignUpMode
+    ? 'Already have an account? Sign in'
+    : "Don't have an account? Sign up";
+  document.querySelector('.login-submit').textContent = isSignUpMode ? 'Sign Up' : 'Sign In';
+}
+
+function emailSignIn() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
+
+  if (!email || !password) { errEl.textContent = 'Please fill in all fields'; return; }
+
+  const action = isSignUpMode
+    ? auth.createUserWithEmailAndPassword(email, password)
+    : auth.signInWithEmailAndPassword(email, password);
+
+  action.catch(err => {
+    if (!isSignUpMode && err.code === 'auth/user-not-found') {
+      auth.createUserWithEmailAndPassword(email, password).catch(e => {
+        errEl.textContent = e.message;
+      });
+    } else {
+      errEl.textContent = err.message;
+    }
+  });
+}
+
+function logout() {
+  if (ballotUnsubscribe) { ballotUnsubscribe(); ballotUnsubscribe = null; }
+  auth.signOut();
+}
+
+// ===== AUTH STATE =====
+auth.onAuthStateChanged(async user => {
+  if (user) {
+    currentUser = user;
+
+    // Save/update user doc
+    const userRef = db.collection('users').doc(user.uid);
+    await userRef.set({
+      displayName: user.displayName || user.email,
+      email: user.email,
+      photoUrl: user.photoURL || '',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    // Check for saved group
+    const userDoc = await userRef.get();
+    const savedGroup = userDoc.data()?.selectedGroup;
+
+    if (savedGroup) {
+      currentGroup = savedGroup;
+      loadVotingScreen();
+    } else {
+      navigateToScreen('groupScreen');
+    }
+  } else {
+    currentUser = null;
+    currentGroup = null;
+    navigateToScreen('loginScreen');
+  }
+});
+
+// ===== GROUP =====
+async function joinGroup() {
+  const groupId = document.getElementById('groupSelect').value;
+  currentGroup = groupId;
+
+  await db.collection('users').doc(currentUser.uid).set({
+    selectedGroup: groupId
+  }, { merge: true });
+
+  loadVotingScreen();
+}
+
+// ===== VOTING =====
+async function loadVotingScreen() {
+  navigateToScreen('votingScreen');
+
+  const today = getCSTDateString();
+  document.getElementById('dateDisplay').textContent = formatDate(today);
+
+  // Load group data
+  const groupDoc = await db.collection('groups').doc(currentGroup).get();
+  if (groupDoc.exists) {
+    const data = groupDoc.data();
+    document.getElementById('groupNameDisplay').textContent = data.name || currentGroup;
+    restaurants = data.restaurants || [];
+  } else {
+    // Seed default restaurants if group doesn't exist yet
+    restaurants = [
+      {id: 'posse', name: 'Posse'},
+      {id: 'crown-anchor', name: 'Crown & Anchor'},
+      {id: 'taco-joint', name: 'Taco Joint'},
+      {id: 'ullah-lake', name: 'Ullah-Lake'},
+      {id: 'kinsolving', name: 'Kinsolving'},
+      {id: 'torchys', name: "Torchy's Tacos"},
+      {id: 'quality-seafood', name: 'Quality Seafood'},
+      {id: 'kirby-lane', name: 'Kirby Lane'}
+    ];
+    await db.collection('groups').doc(currentGroup).set({
+      name: 'PGE Lunchbox',
+      restaurants: restaurants
+    });
+  }
+
+  switchTab('vote');
+  listenToBallots();
+  updateVotingStatus();
+
+  // Check status every minute
+  setInterval(updateVotingStatus, 60000);
+}
+
+function updateVotingStatus() {
+  const statusEl = document.getElementById('statusDisplay');
+  if (isBeforeNoon()) {
+    statusEl.textContent = '🟢 Voting Open';
+    statusEl.className = 'voting-header-status open';
+  } else {
+    statusEl.textContent = '🔴 Voting Closed';
+    statusEl.className = 'voting-header-status closed';
+  }
+  renderVoteTab();
+}
+
+function listenToBallots() {
+  if (ballotUnsubscribe) ballotUnsubscribe();
+
+  const today = getCSTDateString();
+  const ballotsRef = db.collection('groups').doc(currentGroup)
+    .collection('votes').doc(today)
+    .collection('ballots');
+
+  ballotUnsubscribe = ballotsRef.onSnapshot(snapshot => {
+    voteCounts = {};
+    userVote = null;
+
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const rName = data.restaurantName;
+      voteCounts[rName] = (voteCounts[rName] || 0) + 1;
+
+      if (doc.id === currentUser.uid) {
+        userVote = data;
+      }
+    });
+
+    renderVoteTab();
+  });
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tabVote').classList.toggle('active', tab === 'vote');
+  document.getElementById('tabHistory').classList.toggle('active', tab === 'history');
+
+  if (tab === 'vote') {
+    renderVoteTab();
+  } else {
+    renderHistoryTab();
+  }
+}
+
+function renderVoteTab() {
+  if (currentTab !== 'vote') return;
+  const content = document.getElementById('votingContent');
+
+  if (!isBeforeNoon()) {
+    // Show winner + bar chart
+    renderResults(content);
+    return;
+  }
+
+  // Voting UI
+  let html = '<div class="restaurant-grid">';
+
+  restaurants.forEach(r => {
+    const count = voteCounts[r.name] || 0;
+    const isVoted = userVote && userVote.restaurantId === r.id;
+    const isDimmed = userVote && !isVoted;
+    const classes = ['restaurant-btn'];
+    if (isVoted) classes.push('voted');
+    if (isDimmed) classes.push('dimmed');
+
+    html += `<button class="${classes.join(' ')}" onclick="castVote('${r.id}', '${r.name.replace(/'/g, "\\'")}')">
+      <span class="vote-count">${count}</span>
+      <span class="restaurant-name">${r.name}</span>
+    </button>`;
+  });
+
+  // Check for votes on restaurants not in the group list
+  Object.keys(voteCounts).forEach(name => {
+    if (!restaurants.find(r => r.name === name)) {
+      const count = voteCounts[name] || 0;
+      const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const isVoted = userVote && userVote.restaurantName === name;
+      const isDimmed = userVote && !isVoted;
+      const classes = ['restaurant-btn'];
+      if (isVoted) classes.push('voted');
+      if (isDimmed) classes.push('dimmed');
+      html += `<button class="${classes.join(' ')}" onclick="castVote('${id}', '${name.replace(/'/g, "\\'")}')">
+        <span class="vote-count">${count}</span>
+        <span class="restaurant-name">${name}</span>
+      </button>`;
+    }
+  });
+
+  html += `<button class="add-restaurant-btn" onclick="showAddRestaurant()" id="addBtn">+ Add Restaurant</button>`;
+  html += `<div class="add-restaurant-form" id="addForm">
+    <input type="text" id="newRestaurantName" placeholder="Restaurant name">
+    <button onclick="addRestaurant()">Add</button>
+  </div>`;
+
+  html += '</div>';
+  content.innerHTML = html;
+}
+
+function renderResults(content) {
+  // Determine winner
+  const sorted = Object.entries(voteCounts).sort((a, b) => b[1] - a[1]);
+
+  if (sorted.length === 0) {
+    content.innerHTML = '<div class="no-votes-msg">No votes were cast today</div>';
+    return;
+  }
+
+  const maxVotes = sorted[0][1];
+  const winner = sorted[0][0];
+
+  let html = `<div class="winner-display">
+    <div class="winner-trophy">🏆</div>
+    <div class="winner-label">Today's Winner</div>
+    <div class="winner-name">${winner}</div>
+    <div class="winner-votes">${maxVotes} vote${maxVotes !== 1 ? 's' : ''}</div>
+  </div>`;
+
+  // Bar chart
+  html += '<div class="results-chart">';
+  html += '<div class="results-chart-title">Full Results</div>';
+
+  sorted.forEach(([name, count]) => {
+    const pct = maxVotes > 0 ? (count / maxVotes * 100) : 0;
+    html += `<div class="chart-bar-row">
+      <div class="chart-bar-label">${name}</div>
+      <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${pct}%"></div></div>
+      <div class="chart-bar-count">${count}</div>
+    </div>`;
+  });
+
+  html += '</div>';
+
+  // Save winner to history
+  saveHistory(winner, voteCounts);
+
+  content.innerHTML = html;
+}
+
+async function saveHistory(winner, votes) {
+  const today = getCSTDateString();
+  const histRef = db.collection('groups').doc(currentGroup)
+    .collection('history').doc(today);
+  const doc = await histRef.get();
+  if (!doc.exists) {
+    try {
+      await histRef.set({ winner, votes, savedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    } catch (e) {
+      console.warn('Could not save history:', e);
+    }
+  }
+}
+
+async function castVote(restaurantId, restaurantName) {
+  if (!isBeforeNoon()) {
+    showToast('Voting is closed for today!');
+    return;
+  }
+
+  if (userVote) {
+    showToast('You already voted today!');
+    return;
+  }
+
+  const today = getCSTDateString();
+  try {
+    await db.collection('groups').doc(currentGroup)
+      .collection('votes').doc(today)
+      .collection('ballots').doc(currentUser.uid)
+      .set({
+        restaurantId,
+        restaurantName,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+    showToast('Vote cast! 🗳️');
+  } catch (e) {
+    showToast('Error voting: ' + e.message);
+  }
+}
+
+function showAddRestaurant() {
+  document.getElementById('addBtn').style.display = 'none';
+  document.getElementById('addForm').classList.add('show');
+  document.getElementById('newRestaurantName').focus();
+}
+
+async function addRestaurant() {
+  const name = document.getElementById('newRestaurantName').value.trim();
+  if (!name) return;
+
+  const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+  // Check duplicate
+  if (restaurants.find(r => r.id === id || r.name.toLowerCase() === name.toLowerCase())) {
+    showToast('Restaurant already exists!');
+    return;
+  }
+
+  // Add to group's restaurant list
+  restaurants.push({ id, name });
+  await db.collection('groups').doc(currentGroup).update({
+    restaurants: restaurants
+  });
+
+  // Auto-vote for the new restaurant
+  castVote(id, name);
+
+  showToast(`Added ${name}!`);
+}
+
+// ===== HISTORY =====
+async function renderHistoryTab() {
+  const content = document.getElementById('votingContent');
+  content.innerHTML = '<div class="no-votes-msg">Loading history...</div>';
+
+  try {
+    const snapshot = await db.collection('groups').doc(currentGroup)
+      .collection('history')
+      .orderBy('savedAt', 'desc')
+      .limit(30)
+      .get();
+
+    if (snapshot.empty) {
+      content.innerHTML = '<div class="no-votes-msg">No history yet</div>';
+      return;
+    }
+
+    let html = '<ul class="history-list">';
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      html += `<li class="history-item">
+        <span class="history-date">${formatDate(doc.id)}</span>
+        <span class="history-winner">🏆 ${data.winner}</span>
+      </li>`;
+    });
+    html += '</ul>';
+    content.innerHTML = html;
+  } catch (e) {
+    content.innerHTML = `<div class="no-votes-msg">Error loading history</div>`;
+  }
+}
+
+// ===== INIT =====
+setTimeout(() => {
+  // Splash screen timeout — auth listener will navigate
+  if (document.getElementById('splashScreen').classList.contains('active') && !currentUser) {
+    navigateToScreen('loginScreen');
+  }
+}, 2500);
+</script>
+</body>
+</html>
