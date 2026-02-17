@@ -94,7 +94,12 @@ jobs:
             -scheme "App" \
             -destination "generic/platform=iOS" \
             -configuration Release \
-            -archivePath $RUNNER_TEMP/LunchBunch.xcarchive
+            -archivePath $RUNNER_TEMP/LunchBunch.xcarchive \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            DEVELOPMENT_TEAM=ZVXKA392H8 \
+            PROVISIONING_PROFILE="db6982fa-362b-4d5b-a1ee-ec59246f1b65" \
+            PROVISIONING_PROFILE_SPECIFIER="Lunch Bunch App Store"
 
       - name: Export IPA
         run: |
