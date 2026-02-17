@@ -995,15 +995,17 @@ function navigateToScreen(screenId) {
 // ===== AUTH =====
 function googleSignIn() {
   const provider = new firebase.auth.GoogleAuthProvider();
-  // Use redirect on mobile (popup doesn't work in PWA/webview)
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  if (isMobile) {
-    auth.signInWithRedirect(provider);
-  } else {
-    auth.signInWithPopup(provider).catch(err => {
+  // Try popup first, fall back to redirect if it fails (e.g. mobile browsers blocking popups)
+  auth.signInWithPopup(provider).catch(err => {
+    console.warn('Popup sign-in failed, trying redirect:', err.code);
+    if (err.code === 'auth/popup-blocked' || 
+        err.code === 'auth/popup-closed-by-user' ||
+        err.code === 'auth/operation-not-supported-in-this-environment') {
+      auth.signInWithRedirect(provider);
+    } else {
       showToast('Google sign-in failed: ' + err.message);
-    });
-  }
+    }
+  });
 }
 
 function toggleEmailForm() {
