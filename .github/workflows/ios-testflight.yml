@@ -55,6 +55,19 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           echo "$PROVISIONING_PROFILE" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/db6982fa-362b-4d5b-a1ee-ec59246f1b65.mobileprovision
 
+      - name: Debug provisioning profile
+        run: |
+          echo "=== Installed profiles ==="
+          ls -la ~/Library/MobileDevice/Provisioning\ Profiles/
+          echo "=== Profile UUID check ==="
+          /usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< "$(/usr/bin/security cms -D -i ~/Library/MobileDevice/Provisioning\ Profiles/db6982fa-362b-4d5b-a1ee-ec59246f1b65.mobileprovision 2>/dev/null)" 2>/dev/null || echo "PlistBuddy failed"
+          echo "=== Profile Name check ==="
+          /usr/libexec/PlistBuddy -c "Print Name" /dev/stdin <<< "$(/usr/bin/security cms -D -i ~/Library/MobileDevice/Provisioning\ Profiles/db6982fa-362b-4d5b-a1ee-ec59246f1b65.mobileprovision 2>/dev/null)" 2>/dev/null || echo "PlistBuddy failed"
+          echo "=== File size ==="
+          wc -c ~/Library/MobileDevice/Provisioning\ Profiles/db6982fa-362b-4d5b-a1ee-ec59246f1b65.mobileprovision
+          echo "=== pbxproj signing settings ==="
+          grep -A2 "CODE_SIGN_STYLE\|PROVISIONING_PROFILE" ios/App/App.xcodeproj/project.pbxproj | head -30
+
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_16.4.app
 
