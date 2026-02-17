@@ -15,8 +15,8 @@
   @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;600&display=swap');
 
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html { height: 100%; overflow: hidden; }
-  body { height: 100%; overflow: hidden; position: fixed; width: 100%; }
+  html { height: 100%; overflow: hidden; overscroll-behavior: none; touch-action: none; }
+  body { height: 100%; overflow: hidden; position: fixed; width: 100%; overscroll-behavior: none; touch-action: manipulation; }
 
   :root {
     --primary: #bf5700;
@@ -142,6 +142,7 @@
     padding: 40px 24px;
     background: radial-gradient(ellipse at 50% 30%, #2c2c2c 0%, #1a1a1a 60%, #111 100%);
     overflow-y: auto;
+    touch-action: pan-y;
   }
 
   .login-logo { font-size: 64px; margin-bottom: 12px; filter: drop-shadow(0 0 16px rgba(191,87,0,0.5)); }
@@ -401,6 +402,7 @@
     -webkit-overflow-scrolling: touch;
     min-height: 0;
     scrollbar-width: none;
+    touch-action: pan-y;
   }
   .voting-content::-webkit-scrollbar { display: none; }
   .voting-footer {
@@ -993,9 +995,15 @@ function navigateToScreen(screenId) {
 // ===== AUTH =====
 function googleSignIn() {
   const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch(err => {
-    showToast('Google sign-in failed: ' + err.message);
-  });
+  // Use redirect on mobile (popup doesn't work in PWA/webview)
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  if (isMobile) {
+    auth.signInWithRedirect(provider);
+  } else {
+    auth.signInWithPopup(provider).catch(err => {
+      showToast('Google sign-in failed: ' + err.message);
+    });
+  }
 }
 
 function toggleEmailForm() {
@@ -1025,6 +1033,13 @@ function logout() {
   if (ballotUnsubscribe) { ballotUnsubscribe(); ballotUnsubscribe = null; }
   auth.signOut();
 }
+
+// ===== HANDLE REDIRECT RESULT =====
+auth.getRedirectResult().catch(err => {
+  if (err.code !== 'auth/no-auth-event') {
+    showToast('Google sign-in failed: ' + err.message);
+  }
+});
 
 // ===== AUTH STATE =====
 auth.onAuthStateChanged(async user => {
@@ -2020,6 +2035,19 @@ setTimeout(() => {
     navigateToScreen('loginScreen');
   }
 }, 2500);
+
+// Prevent iOS rubber-band scrolling on non-scrollable areas
+document.addEventListener('touchmove', function(e) {
+  let target = e.target;
+  while (target && target !== document.body) {
+    const style = window.getComputedStyle(target);
+    if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+      if (target.scrollHeight > target.clientHeight) return; // allow scroll in scrollable areas
+    }
+    target = target.parentElement;
+  }
+  e.preventDefault();
+}, { passive: false });
 </script>
 </body>
 </html>
