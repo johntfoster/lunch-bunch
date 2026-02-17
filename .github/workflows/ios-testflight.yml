@@ -53,7 +53,7 @@ jobs:
           security list-keychains -d user -s $KEYCHAIN_PATH login.keychain-db
 
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          echo "$PROVISIONING_PROFILE" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/lunchbunch.mobileprovision
+          echo "$PROVISIONING_PROFILE" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/db6982fa-362b-4d5b-a1ee-ec59246f1b65.mobileprovision
 
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_16.4.app
