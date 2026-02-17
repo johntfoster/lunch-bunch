@@ -23,6 +23,26 @@ jobs:
       - name: Sync Capacitor iOS
         run: npx cap sync ios
 
+      - name: Fix signing after cap sync
+        run: |
+          cd ios/App/App.xcodeproj
+          sed -i '' 's/CODE_SIGN_IDENTITY = "iPhone Developer"/CODE_SIGN_IDENTITY = "Apple Distribution"/g' project.pbxproj
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' project.pbxproj
+          # Ensure DEVELOPMENT_TEAM is set for Release build config of App target
+          ruby -e '
+            path = "project.pbxproj"
+            content = File.read(path)
+            # Add DEVELOPMENT_TEAM after CODE_SIGN_STYLE = Manual if not already present
+            unless content.include?("DEVELOPMENT_TEAM = ZVXKA392H8")
+              content.gsub!(/CODE_SIGN_STYLE = Manual;/) { |m| "#{m}\n\t\t\t\tDEVELOPMENT_TEAM = ZVXKA392H8;" }
+            end
+            # Add PROVISIONING_PROFILE_SPECIFIER after PRODUCT_BUNDLE_IDENTIFIER if not present
+            unless content.include?("PROVISIONING_PROFILE_SPECIFIER")
+              content.gsub!(/PRODUCT_BUNDLE_IDENTIFIER = com\.johntfoster\.lunchbunch;/) { |m| "#{m}\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = \"Lunch Bunch App Store\";" }
+            end
+            File.write(path, content)
+          '
+
       - name: Install App Store Connect API key
         env:
           ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
