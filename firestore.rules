@@ -2,23 +2,46 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users can read/write their own doc
+    // Users can read/write their own doc; any authenticated user can update selectedGroup
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null;
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Groups are readable by any authenticated user
+    // Groups: any authenticated user can read (including list) and write
     match /groups/{groupId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null;
 
-      // Votes subcollection
-      match /votes/{dateId}/ballots/{userId} {
+      // Members subcollection
+      match /members/{memberId} {
         allow read: if request.auth != null;
-        // Users can only create their own ballot (one per day)
-        allow create: if request.auth != null && request.auth.uid == userId;
-        // No updates or deletes
-        allow update, delete: if false;
+        allow write: if request.auth != null;
+      }
+
+      // Pending members subcollection
+      match /pendingMembers/{memberId} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null;
+      }
+
+      // Votes document
+      match /votes/{dateId} {
+        allow read, write: if request.auth != null;
+
+        // Ballots subcollection
+        match /ballots/{userId} {
+          allow read: if request.auth != null;
+          allow create, update: if request.auth != null && request.auth.uid == userId; // TEMPORARY: update allowed for testing
+          allow delete: if request.auth != null; // TEMPORARY: for testing
+        }
+
+        // Daily extras subcollection
+        match /extras/{extraId} {
+          allow read, write: if request.auth != null;
+        }
       }
 
       // History is read-only for users (written by client when voting closes)

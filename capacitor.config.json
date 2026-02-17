@@ -2,7 +2,18 @@
   "appId": "com.johntfoster.lunchbunch",
   "appName": "Lunch Bunch",
   "webDir": "src",
+  "backgroundColor": "#1a1a1a",
+  "ios": {
+    "scheme": "Lunch Bunch",
+    "contentInset": "always"
+  },
   "server": {
-    "androidScheme": "https"
+    "androidScheme": "https",
+    "allowNavigation": [
+      "*.googleapis.com",
+      "*.firebaseapp.com",
+      "*.web.app",
+      "accounts.google.com"
+    ]
   }
 }

@@ -15,6 +15,8 @@
   @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;600&display=swap');
 
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { height: 100%; overflow: hidden; }
+  body { height: 100%; overflow: hidden; position: fixed; width: 100%; }
 
   :root {
     --primary: #bf5700;
@@ -254,6 +256,8 @@
     -webkit-appearance: none; appearance: none;
   }
 
+  /* (fuzzy dropdown styles below in .fuzzy-dropdown section) */
+
   .group-join-btn {
     width: 100%; max-width: 300px; padding: 14px;
     border-radius: 12px; border: none;
@@ -306,6 +310,73 @@
   }
   .voting-logout:hover { color: var(--text); }
 
+  .voting-header-title-row {
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .voting-header-title { flex: 1; text-align: center; }
+  .settings-btn {
+    background: none; border: none; font-size: 20px; cursor: pointer;
+    padding: 4px; opacity: 0.7; transition: opacity 0.2s;
+    position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+  }
+  .settings-btn:hover { opacity: 1; }
+
+  .settings-overlay {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7); z-index: 100;
+    justify-content: center; align-items: center;
+  }
+  .settings-overlay.show { display: flex; }
+  .settings-modal {
+    background: var(--dark-steel); border-radius: 16px; padding: 24px;
+    width: 90%; max-width: 360px; color: var(--text);
+  }
+  .settings-title {
+    font-family: 'Oswald', sans-serif; font-size: 20px; font-weight: 600;
+    text-align: center; margin-bottom: 20px; color: var(--primary);
+  }
+  .settings-field {
+    margin-bottom: 16px;
+  }
+  .settings-field label {
+    display: block; font-size: 14px; color: var(--text-muted); margin-bottom: 6px;
+  }
+  .settings-input {
+    width: 100%; padding: 10px 12px; border-radius: 8px;
+    border: 1px solid var(--medium-gray); background: var(--near-black);
+    color: var(--text); font-size: 16px;
+  }
+  .settings-stub { opacity: 0.5; }
+  .settings-coming-soon {
+    font-size: 12px; color: var(--text-muted); font-style: italic;
+  }
+  .settings-actions {
+    display: flex; gap: 10px; margin-top: 20px;
+  }
+  .settings-save {
+    flex: 1; padding: 10px; border: none; border-radius: 8px;
+    background: var(--primary); color: white; font-weight: 600;
+    font-size: 15px; cursor: pointer;
+  }
+  .settings-save:hover { background: var(--primary-dark); }
+  .settings-cancel {
+    flex: 1; padding: 10px; border: 1px solid var(--medium-gray); border-radius: 8px;
+    background: transparent; color: var(--text-muted); font-size: 15px; cursor: pointer;
+  }
+  .settings-logout {
+    width: 100%; padding: 12px; border: none; border-radius: 8px;
+    background: var(--danger); color: #fff; font-family: 'Oswald', sans-serif;
+    font-size: 15px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 1px; cursor: pointer; margin-top: 16px;
+    transition: filter 0.2s;
+  }
+  .settings-logout:hover { filter: brightness(1.15); }
+  .settings-section-label {
+    font-family: 'Oswald', sans-serif; font-size: 13px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; margin-top: 4px;
+  }
+
   .voting-tabs {
     display: flex; flex-shrink: 0;
     border-bottom: 1px solid #333;
@@ -328,7 +399,21 @@
   .voting-content {
     flex: 1; overflow-y: auto; padding: 16px;
     -webkit-overflow-scrolling: touch;
+    min-height: 0;
+    scrollbar-width: none;
   }
+  .voting-content::-webkit-scrollbar { display: none; }
+  .voting-footer {
+    flex-shrink: 0;
+    padding: 12px 16px;
+    border-top: 1px solid var(--medium-gray);
+    overflow-y: auto;
+    max-height: 40vh;
+    scrollbar-width: none;
+  }
+  .voting-footer::-webkit-scrollbar { display: none; }
+  .voting-footer:empty { display: none; }
+  .voting-footer:not(:empty) { min-height: 160px; }
 
   /* Restaurant grid */
   .restaurant-grid {
@@ -460,6 +545,7 @@
     font-size: 14px; color: var(--text-muted);
     text-transform: uppercase; letter-spacing: 2px;
     margin-bottom: 12px;
+    text-align: center;
   }
 
   .chart-bar-row {
@@ -514,6 +600,33 @@
     padding: 40px 20px; font-size: 15px;
   }
 
+  .pending-banner {
+    background: rgba(196, 132, 29, 0.15);
+    border: 1px solid var(--accent-gold);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin: 8px 16px;
+    flex-shrink: 0;
+  }
+  .pending-banner-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 13px; color: var(--accent-gold);
+    text-transform: uppercase; letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  .pending-member-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 0; font-size: 14px;
+  }
+  .pending-member-name { color: var(--text); }
+  .pending-member-actions { display: flex; gap: 8px; }
+  .pending-approve-btn, .pending-deny-btn {
+    padding: 4px 12px; border-radius: 6px; border: none;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .pending-approve-btn { background: var(--success); color: #1a1a1a; }
+  .pending-deny-btn { background: var(--danger); color: #fff; }
+
   /* Toast */
   .toast {
     position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
@@ -525,6 +638,155 @@
     max-width: 90%;
   }
   .toast.show { opacity: 1; }
+
+  /* Fuzzy search dropdown */
+  .fuzzy-dropdown { position: relative; }
+  .fuzzy-dropdown input {
+    width: 100%; padding: 12px 14px; border-radius: 10px;
+    border: 1px solid var(--medium-gray); background: var(--near-black);
+    color: var(--text); font-family: 'Source Sans 3', sans-serif;
+    font-size: 15px; outline: none; transition: border-color 0.2s;
+  }
+  .fuzzy-dropdown input:focus { border-color: var(--primary); }
+  .fuzzy-dropdown input::placeholder { color: #666; }
+  .fuzzy-dropdown-list {
+    display: none; position: absolute; top: 100%; left: 0; right: 0;
+    max-height: 200px; overflow-y: auto; z-index: 10;
+    background: var(--dark-steel); border: 1px solid var(--medium-gray);
+    border-radius: 0 0 10px 10px; margin-top: -1px;
+    scrollbar-width: none;
+  }
+  .fuzzy-dropdown-list::-webkit-scrollbar { display: none; }
+  .fuzzy-dropdown-list.open { display: block; }
+  .fuzzy-dropdown-item {
+    padding: 10px 14px; cursor: pointer; font-size: 14px;
+    color: var(--text); transition: background 0.15s;
+  }
+  .fuzzy-dropdown-item:hover, .fuzzy-dropdown-item.active {
+    background: rgba(191,87,0,0.2); color: var(--primary);
+  }
+  .fuzzy-dropdown-empty {
+    padding: 10px 14px; font-size: 13px; color: var(--text-muted);
+    font-style: italic;
+  }
+
+  /* Settings modal scrollable + logout */
+  .settings-modal { max-height: 80vh; overflow-y: auto; scrollbar-width: none; }
+  .settings-modal::-webkit-scrollbar { display: none; }
+  .settings-logout-btn {
+    width: 100%; margin-top: 16px; padding: 10px; border-radius: 8px;
+    border: 1px solid var(--danger); background: transparent;
+    color: var(--danger); font-size: 15px; cursor: pointer;
+    font-family: 'Source Sans 3', sans-serif; transition: all 0.2s;
+  }
+  .settings-logout-btn:hover { background: rgba(231,76,60,0.15); }
+
+  /* Restaurant management */
+  .restaurant-mgmt-list { list-style: none; max-height: 200px; overflow-y: auto; scrollbar-width: none; }
+  .restaurant-mgmt-list::-webkit-scrollbar { display: none; }
+  .restaurant-mgmt-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .restaurant-mgmt-item:last-child { border-bottom: none; }
+  .restaurant-mgmt-name {
+    flex: 1; font-size: 14px; color: var(--text);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .restaurant-mgmt-name input {
+    width: 100%; padding: 4px 8px; border-radius: 6px;
+    border: 1px solid var(--medium-gray); background: var(--near-black);
+    color: var(--text); font-size: 14px; font-family: 'Source Sans 3', sans-serif;
+  }
+  .restaurant-mgmt-actions { display: flex; gap: 6px; margin-left: 8px; flex-shrink: 0; }
+  .restaurant-mgmt-actions button {
+    background: none; border: none; cursor: pointer; font-size: 16px;
+    padding: 2px 4px; opacity: 0.7; transition: opacity 0.2s;
+  }
+  .restaurant-mgmt-actions button:hover { opacity: 1; }
+  .restaurant-add-row {
+    display: flex; gap: 8px; margin-top: 8px;
+  }
+  .restaurant-add-row input {
+    flex: 1; padding: 8px 10px; border-radius: 8px;
+    border: 1px solid var(--medium-gray); background: var(--near-black);
+    color: var(--text); font-size: 14px; font-family: 'Source Sans 3', sans-serif;
+  }
+  .restaurant-add-row button {
+    padding: 8px 14px; border-radius: 8px; border: none;
+    background: var(--primary); color: #fff; font-size: 13px;
+    font-weight: 600; cursor: pointer; white-space: nowrap;
+  }
+
+  /* Create Group */
+  .fuzzy-dropdown-create {
+    padding: 10px 14px; cursor: pointer; font-size: 14px;
+    color: var(--primary); font-weight: 600;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    transition: background 0.15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .fuzzy-dropdown-create:hover { background: rgba(191,87,0,0.15); }
+
+  .create-group-overlay {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7); z-index: 200;
+    justify-content: center; align-items: center;
+  }
+  .create-group-overlay.show { display: flex; }
+  .create-group-modal {
+    background: var(--dark-steel); border-radius: 16px; padding: 24px;
+    width: 90%; max-width: 340px; color: var(--text);
+  }
+  .create-group-title {
+    font-family: 'Oswald', sans-serif; font-size: 20px; font-weight: 600;
+    text-align: center; margin-bottom: 4px; color: var(--primary);
+  }
+  .create-group-subtitle {
+    text-align: center; font-size: 13px; color: var(--text-muted);
+    margin-bottom: 20px;
+  }
+  .create-group-input {
+    width: 100%; padding: 12px 14px; border-radius: 10px;
+    border: 1px solid var(--medium-gray); background: var(--near-black);
+    color: var(--text); font-family: 'Source Sans 3', sans-serif;
+    font-size: 15px; outline: none; margin-bottom: 16px;
+  }
+  .create-group-input:focus { border-color: var(--primary); }
+  .create-group-input::placeholder { color: #666; }
+  .create-group-price {
+    text-align: center; margin-bottom: 16px; padding: 12px;
+    background: rgba(191,87,0,0.1); border-radius: 10px;
+    border: 1px solid rgba(191,87,0,0.2);
+  }
+  .create-group-price-amount {
+    font-family: 'Oswald', sans-serif; font-size: 28px;
+    font-weight: 700; color: var(--primary);
+  }
+  .create-group-price-period {
+    font-size: 13px; color: var(--text-muted);
+  }
+  .create-group-price-note {
+    font-size: 11px; color: var(--text-muted); margin-top: 4px;
+  }
+  .create-group-btn {
+    width: 100%; padding: 14px; border-radius: 12px; border: none;
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+    color: #fff; font-family: 'Oswald', sans-serif; font-size: 16px;
+    font-weight: 600; text-transform: uppercase; letter-spacing: 2px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .create-group-btn:hover { transform: translateY(-1px); filter: brightness(1.1); }
+  .create-group-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; filter: none; }
+  .create-group-cancel {
+    width: 100%; padding: 10px; border: none; background: none;
+    color: var(--text-muted); font-size: 14px; cursor: pointer;
+    margin-top: 8px; font-family: 'Source Sans 3', sans-serif;
+  }
+  .create-group-error {
+    color: var(--danger); font-size: 13px; text-align: center;
+    margin-bottom: 12px; min-height: 18px;
+  }
 </style>
 </head>
 <body>
@@ -549,46 +811,82 @@
       Sign in with Google
     </button>
 
+    <div class="login-divider">or</div>
+
     <button class="login-btn login-btn-email" onclick="toggleEmailForm()">
       ✉️ Sign in with Email
     </button>
-
-    <div class="login-divider">or</div>
 
     <div id="emailForm" class="login-form">
       <input type="email" id="loginEmail" class="login-input" placeholder="Email address">
       <input type="password" id="loginPassword" class="login-input" placeholder="Password">
       <button class="login-submit" onclick="emailSignIn()">Sign In</button>
       <div id="loginError" class="login-error"></div>
-      <div class="login-toggle" onclick="toggleSignUpMode()"><span id="toggleText">Don't have an account? Sign up</span></div>
     </div>
   </div>
 
   <!-- GROUP SELECT -->
   <div id="groupScreen" class="screen">
     <div class="group-title">Select Your Group</div>
-    <select id="groupSelect" class="group-select">
-      <option value="pge-lunchbox">PGE Lunchbox</option>
-    </select>
+    <div id="groupSelectDropdown" class="fuzzy-dropdown" style="width:100%;max-width:300px;margin-bottom:16px;"></div>
     <button class="group-join-btn" onclick="joinGroup()">Join Group</button>
   </div>
 
   <!-- VOTING -->
   <div id="votingScreen" class="screen">
     <div class="voting-header">
-      <div class="voting-header-title" id="groupNameDisplay">PGE Lunchbox</div>
+      <div class="voting-header-title-row">
+        <div class="voting-header-title" id="groupNameDisplay">PGE Lunch Bunch</div>
+        <button class="settings-btn" id="settingsBtn" onclick="openSettings()">⚙️</button>
+      </div>
       <div class="voting-header-date" id="dateDisplay"></div>
       <div class="voting-header-status" id="statusDisplay"></div>
-      <button class="voting-logout" onclick="logout()">Logout</button>
     </div>
 
+    <!-- Settings Modal -->
+    <div class="settings-overlay" id="settingsOverlay" onclick="closeSettings()">
+      <div class="settings-modal" onclick="event.stopPropagation()">
+        <div class="settings-title">Settings</div>
+        <div class="settings-field">
+          <label>Switch Group</label>
+          <div id="settingsGroupDropdown" class="fuzzy-dropdown"></div>
+        </div>
+        <div id="managerSettings" style="display:none;">
+          <div class="settings-field">
+            <label>Voting closes at:</label>
+            <input type="time" id="settingsCloseTime" class="settings-input" onchange="autoSaveCloseTime()">
+          </div>
+          <div class="settings-field settings-stub">
+            <label>Push notifications</label>
+            <span class="settings-coming-soon">Coming soon</span>
+          </div>
+          <div class="settings-field">
+            <label>Restaurants</label>
+            <ul class="restaurant-mgmt-list" id="restaurantMgmtList"></ul>
+            <div class="restaurant-add-row">
+              <input type="text" id="mgmtNewRestaurant" placeholder="Add restaurant...">
+              <button onclick="mgmtAddRestaurant()">Add</button>
+            </div>
+          </div>
+        </div>
+        <div class="settings-actions">
+          <button class="settings-cancel" onclick="closeSettings()">Close</button>
+        </div>
+        <button class="settings-logout" onclick="logout()">Logout</button>
+      </div>
+    </div>
+
+    <div id="pendingBanner"></div>
     <div class="voting-tabs">
       <div class="voting-tab active" onclick="switchTab('vote')" id="tabVote">Vote</div>
       <div class="voting-tab" onclick="switchTab('history')" id="tabHistory">History</div>
     </div>
 
     <div class="voting-content" id="votingContent">
-      <!-- Populated by JS -->
+      <!-- Scrollable restaurant cards -->
+    </div>
+    <div class="voting-footer" id="votingFooter">
+      <!-- Fixed bar chart at bottom -->
     </div>
   </div>
 
@@ -596,11 +894,28 @@
 
 <div id="toast" class="toast"></div>
 
+<!-- Create Group Modal -->
+<div class="create-group-overlay" id="createGroupOverlay" onclick="closeCreateGroup()">
+  <div class="create-group-modal" onclick="event.stopPropagation()">
+    <div class="create-group-title">Create a Group</div>
+    <div class="create-group-subtitle">Start your own Lunch Bunch</div>
+    <input type="text" class="create-group-input" id="createGroupName" placeholder="Group name (e.g. Marketing Team Lunch)" maxlength="50">
+    <div class="create-group-price">
+      <div class="create-group-price-amount">$9.99<span style="font-size:16px;font-weight:400;color:var(--text-muted)">/year</span></div>
+      <div class="create-group-price-period">Annual subscription • Cancel anytime</div>
+      <div class="create-group-price-note">Free for all members — only the manager pays</div>
+    </div>
+    <div class="create-group-error" id="createGroupError"></div>
+    <button class="create-group-btn" id="createGroupBtn" onclick="handleCreateGroup()">Subscribe & Create</button>
+    <button class="create-group-cancel" onclick="closeCreateGroup()">Cancel</button>
+  </div>
+</div>
+
 <script>
 // ===== FIREBASE INIT =====
 firebase.initializeApp({
   apiKey: "AIzaSyASukqVBonypnEsr187Byd_DNdZdVuJRAA",
-  authDomain: "lunch-bunch-jf.web.app",
+  authDomain: "lunch-bunch-jf.firebaseapp.com",
   projectId: "lunch-bunch-jf",
   storageBucket: "lunch-bunch-jf.firebasestorage.app",
   messagingSenderId: "434669680174",
@@ -614,11 +929,16 @@ const auth = firebase.auth();
 let currentUser = null;
 let currentGroup = null;
 let restaurants = [];
+let dailyExtras = [];
+let extrasUnsubscribe = null;
 let userVote = null;
 let voteCounts = {};
+let firstVoteTime = {}; // restaurant name -> earliest vote timestamp (ms)
 let ballotUnsubscribe = null;
-let isSignUpMode = false;
+let groupManagers = [];
+let groupSettings = { votingCloseTime: '11:50', timezone: 'America/Chicago' };
 let currentTab = 'vote';
+let winCounts = {}; // restaurant name -> number of historical wins
 
 // ===== HELPERS =====
 function getCSTDate() {
@@ -632,8 +952,23 @@ function getCSTDateString() {
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
-function isBeforeNoon() {
-  return getCSTDate().getHours() < 12;
+function isVotingOpen() {
+  const now = getCSTDate();
+  const [closeH, closeM] = groupSettings.votingCloseTime.split(':').map(Number);
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const closeMinutes = closeH * 60 + closeM;
+  return nowMinutes < closeMinutes;
+}
+
+function isManager() {
+  return currentUser && groupManagers.includes(currentUser.email);
+}
+
+function formatCloseTime() {
+  const [h, m] = groupSettings.votingCloseTime.split(':').map(Number);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const displayH = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+  return `${displayH}:${m.toString().padStart(2, '0')} ${period}`;
 }
 
 function formatDate(dateStr) {
@@ -667,14 +1002,6 @@ function toggleEmailForm() {
   document.getElementById('emailForm').classList.toggle('show');
 }
 
-function toggleSignUpMode() {
-  isSignUpMode = !isSignUpMode;
-  document.getElementById('toggleText').textContent = isSignUpMode
-    ? 'Already have an account? Sign in'
-    : "Don't have an account? Sign up";
-  document.querySelector('.login-submit').textContent = isSignUpMode ? 'Sign Up' : 'Sign In';
-}
-
 function emailSignIn() {
   const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
@@ -683,12 +1010,8 @@ function emailSignIn() {
 
   if (!email || !password) { errEl.textContent = 'Please fill in all fields'; return; }
 
-  const action = isSignUpMode
-    ? auth.createUserWithEmailAndPassword(email, password)
-    : auth.signInWithEmailAndPassword(email, password);
-
-  action.catch(err => {
-    if (!isSignUpMode && err.code === 'auth/user-not-found') {
+  auth.signInWithEmailAndPassword(email, password).catch(err => {
+    if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
       auth.createUserWithEmailAndPassword(email, password).catch(e => {
         errEl.textContent = e.message;
       });
@@ -717,15 +1040,55 @@ auth.onAuthStateChanged(async user => {
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
 
+    // Handle ?approve= and ?deny= query params
+    const params = new URLSearchParams(window.location.search);
+    const approveParam = params.get('approve');
+    const denyParam = params.get('deny');
+    if (approveParam) {
+      try {
+        await handleApproval(approveParam);
+      } catch (e) {
+        console.error('Approval error:', e);
+        showToast('Approval error: ' + e.message, 5000);
+      }
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (denyParam) {
+      try {
+        await handleDenial(denyParam);
+      } catch (e) {
+        console.error('Denial error:', e);
+        showToast('Denial error: ' + e.message, 5000);
+      }
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
     // Check for saved group
     const userDoc = await userRef.get();
     const savedGroup = userDoc.data()?.selectedGroup;
 
     if (savedGroup) {
       currentGroup = savedGroup;
-      loadVotingScreen();
+      // Verify membership (manager or approved member)
+      const groupDoc = await db.collection('groups').doc(savedGroup).get();
+      const managers = groupDoc.exists ? (groupDoc.data().managers || []) : [];
+      const memberDoc = await db.collection('groups').doc(savedGroup).collection('members').doc(user.uid).get();
+      if (managers.includes(user.email) || memberDoc.exists) {
+        loadVotingScreen();
+      } else {
+        // Check if pending
+        const pendingDoc = await db.collection('groups').doc(savedGroup).collection('pendingMembers').doc(user.uid).get();
+        if (pendingDoc.exists) {
+          currentGroup = savedGroup;
+          navigateToScreen('groupScreen');
+          showPendingState();
+        } else {
+          navigateToScreen('groupScreen');
+          initGroupSelectScreen();
+        }
+      }
     } else {
       navigateToScreen('groupScreen');
+      initGroupSelectScreen();
     }
   } else {
     currentUser = null;
@@ -734,16 +1097,144 @@ auth.onAuthStateChanged(async user => {
   }
 });
 
+async function handleApproval(approveParam) {
+  // approveParam is "groupId/userId"
+  const parts = approveParam.split('/');
+  if (parts.length !== 2) { showToast('Invalid approval link'); return; }
+  const [groupId, userId] = parts;
+
+  // Verify current user is a manager
+  const groupDoc = await db.collection('groups').doc(groupId).get();
+  if (!groupDoc.exists) { showToast('Group not found'); return; }
+  const managers = groupDoc.data().managers || [];
+  if (!managers.includes(currentUser.email)) { showToast('Only managers can approve members'); return; }
+
+  // Get pending member data
+  const pendingRef = db.collection('groups').doc(groupId).collection('pendingMembers').doc(userId);
+  const pendingDoc = await pendingRef.get();
+  if (!pendingDoc.exists) { showToast('No pending request found (may already be approved)'); return; }
+
+  // Move to members
+  const data = pendingDoc.data();
+  try {
+    await db.collection('groups').doc(groupId).collection('members').doc(userId).set({
+      email: data.email,
+      displayName: data.displayName,
+      joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    console.log('Added to members collection');
+  } catch (e) {
+    console.error('Failed to add to members:', e);
+    showToast('Error adding member: ' + e.message);
+    return;
+  }
+
+  try {
+    await pendingRef.delete();
+    console.log('Deleted pending request');
+  } catch (e) {
+    console.error('Failed to delete pending:', e);
+  }
+
+  // Set approved user's selectedGroup
+  try {
+    await db.collection('users').doc(userId).set({ selectedGroup: groupId }, { merge: true });
+    console.log('Set selectedGroup for user', userId);
+  } catch (e) {
+    console.error('Failed to set selectedGroup:', e);
+    // Non-critical — user can still select group on next login
+  }
+
+  showToast(`Approved ${data.displayName || data.email}! ✅`, 5000);
+}
+
+async function handleDenial(denyParam) {
+  const parts = denyParam.split('/');
+  if (parts.length !== 2) { showToast('Invalid denial link'); return; }
+  const [groupId, userId] = parts;
+
+  const groupDoc = await db.collection('groups').doc(groupId).get();
+  if (!groupDoc.exists) { showToast('Group not found'); return; }
+  const managers = groupDoc.data().managers || [];
+  if (!managers.includes(currentUser.email)) { showToast('Only managers can deny members'); return; }
+
+  const pendingRef = db.collection('groups').doc(groupId).collection('pendingMembers').doc(userId);
+  const pendingDoc = await pendingRef.get();
+  if (!pendingDoc.exists) { showToast('No pending request found'); return; }
+
+  const name = pendingDoc.data().displayName || pendingDoc.data().email;
+  await pendingRef.delete();
+  showToast(`Denied ${name} ❌`);
+}
+
 // ===== GROUP =====
 async function joinGroup() {
-  const groupId = document.getElementById('groupSelect').value;
+  const groupId = groupSelectInstance ? groupSelectInstance.getSelected() : null;
+  if (!groupId) { showToast('Please select a group'); return; }
   currentGroup = groupId;
 
-  await db.collection('users').doc(currentUser.uid).set({
-    selectedGroup: groupId
-  }, { merge: true });
+  // Load group to check if user is a manager
+  const groupDoc = await db.collection('groups').doc(groupId).get();
+  const managers = groupDoc.exists ? (groupDoc.data().managers || []) : [];
 
-  loadVotingScreen();
+  if (managers.includes(currentUser.email)) {
+    // Managers auto-approve: add to members and proceed
+    await db.collection('groups').doc(groupId).collection('members').doc(currentUser.uid).set({
+      email: currentUser.email,
+      displayName: currentUser.displayName || currentUser.email,
+      joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await db.collection('users').doc(currentUser.uid).set({ selectedGroup: groupId }, { merge: true });
+    loadVotingScreen();
+  } else {
+    // Check if already a member
+    const memberDoc = await db.collection('groups').doc(groupId).collection('members').doc(currentUser.uid).get();
+    if (memberDoc.exists) {
+      await db.collection('users').doc(currentUser.uid).set({ selectedGroup: groupId }, { merge: true });
+      loadVotingScreen();
+      return;
+    }
+    // Check if already pending
+    const pendingDoc = await db.collection('groups').doc(groupId).collection('pendingMembers').doc(currentUser.uid).get();
+    if (pendingDoc.exists) {
+      showPendingState();
+      return;
+    }
+    // Create pending request
+    await db.collection('groups').doc(groupId).collection('pendingMembers').doc(currentUser.uid).set({
+      email: currentUser.email,
+      displayName: currentUser.displayName || currentUser.email,
+      requestedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showPendingState();
+  }
+}
+
+function showPendingState() {
+  const groupScreen = document.getElementById('groupScreen');
+  groupScreen.querySelector('.group-title').textContent = 'Awaiting Approval';
+  const searchContainer = document.getElementById('groupSelectDropdown');
+  if (searchContainer) searchContainer.style.display = 'none';
+  groupScreen.querySelector('.group-join-btn').style.display = 'none';
+  let pendingMsg = groupScreen.querySelector('.pending-msg');
+  if (!pendingMsg) {
+    pendingMsg = document.createElement('div');
+    pendingMsg.className = 'pending-msg';
+    pendingMsg.style.cssText = 'text-align:center;color:var(--text-muted);font-size:15px;margin-top:16px;max-width:300px;line-height:1.5;';
+    groupScreen.appendChild(pendingMsg);
+  }
+  pendingMsg.textContent = 'Request sent! A group manager will approve your access. Check back soon.';
+
+  // Add logout button
+  let logoutBtn = groupScreen.querySelector('.pending-logout');
+  if (!logoutBtn) {
+    logoutBtn = document.createElement('button');
+    logoutBtn.className = 'pending-logout';
+    logoutBtn.textContent = 'Logout';
+    logoutBtn.style.cssText = 'margin-top:20px;background:none;border:1px solid var(--medium-gray);color:var(--text-muted);padding:10px 24px;border-radius:8px;cursor:pointer;font-size:14px;';
+    logoutBtn.onclick = logout;
+    groupScreen.appendChild(logoutBtn);
+  }
 }
 
 // ===== VOTING =====
@@ -759,6 +1250,25 @@ async function loadVotingScreen() {
     const data = groupDoc.data();
     document.getElementById('groupNameDisplay').textContent = data.name || currentGroup;
     restaurants = data.restaurants || [];
+    groupManagers = data.managers || [];
+    if (data.settings) {
+      groupSettings = { ...groupSettings, ...data.settings };
+    }
+    // One-time cleanup: remove Wingstop from permanent list (safe to remove after 2026-02-17)
+    const _before = restaurants.length;
+    restaurants = restaurants.filter(r => r.name !== 'Wingstop');
+    if (restaurants.length < _before) {
+      await db.collection('groups').doc(currentGroup).update({ restaurants });
+    }
+    // Seed managers if not set
+    if (groupManagers.length === 0) {
+      groupManagers = ['johntfosterjr@gmail.com'];
+      await db.collection('groups').doc(currentGroup).update({ managers: groupManagers });
+    }
+    // Seed settings if not set
+    if (!data.settings) {
+      await db.collection('groups').doc(currentGroup).update({ settings: groupSettings });
+    }
   } else {
     // Seed default restaurants if group doesn't exist yet
     restaurants = [
@@ -772,23 +1282,62 @@ async function loadVotingScreen() {
       {id: 'kirby-lane', name: 'Kirby Lane'}
     ];
     await db.collection('groups').doc(currentGroup).set({
-      name: 'PGE Lunchbox',
+      name: 'PGE Lunch Bunch',
       restaurants: restaurants
     });
+  }
+
+  // Load historical win counts for sorting
+  await loadWinCounts();
+
+  // Auto-add manager as member if not already
+  if (isManager()) {
+    const memberDoc = await db.collection('groups').doc(currentGroup).collection('members').doc(currentUser.uid).get();
+    if (!memberDoc.exists) {
+      await db.collection('groups').doc(currentGroup).collection('members').doc(currentUser.uid).set({
+        email: currentUser.email,
+        displayName: currentUser.displayName || currentUser.email,
+        joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
   }
 
   switchTab('vote');
   listenToBallots();
   updateVotingStatus();
+  if (isManager()) loadPendingMembers();
 
   // Check status every minute
   setInterval(updateVotingStatus, 60000);
 }
 
+async function loadWinCounts() {
+  winCounts = {};
+  try {
+    const snapshot = await db.collection('groups').doc(currentGroup)
+      .collection('history').get();
+    snapshot.forEach(doc => {
+      const winner = doc.data().winner;
+      if (winner) winCounts[winner] = (winCounts[winner] || 0) + 1;
+    });
+  } catch (e) {
+    console.warn('Could not load win counts:', e);
+  }
+}
+
+function sortRestaurants(list) {
+  return list.slice().sort((a, b) => {
+    const wA = winCounts[a.name] || 0;
+    const wB = winCounts[b.name] || 0;
+    if (wB !== wA) return wB - wA; // most wins first
+    return a.name.localeCompare(b.name); // alphabetical tie-break
+  });
+}
+
 function updateVotingStatus() {
   const statusEl = document.getElementById('statusDisplay');
-  if (isBeforeNoon()) {
-    statusEl.textContent = '🟢 Voting Open';
+  if (isVotingOpen()) {
+    statusEl.textContent = `🟢 Voting Open — closes at ${formatCloseTime()}`;
     statusEl.className = 'voting-header-status open';
   } else {
     statusEl.textContent = '🔴 Voting Closed';
@@ -801,18 +1350,35 @@ function listenToBallots() {
   if (ballotUnsubscribe) ballotUnsubscribe();
 
   const today = getCSTDateString();
-  const ballotsRef = db.collection('groups').doc(currentGroup)
-    .collection('votes').doc(today)
-    .collection('ballots');
+  const votesDocRef = db.collection('groups').doc(currentGroup)
+    .collection('votes').doc(today);
+  const ballotsRef = votesDocRef.collection('ballots');
+
+  // Load daily extras from subcollection
+  if (extrasUnsubscribe) extrasUnsubscribe();
+  extrasUnsubscribe = votesDocRef.collection('extras').onSnapshot(snapshot => {
+    dailyExtras = [];
+    snapshot.forEach(doc => {
+      dailyExtras.push({ id: doc.id, name: doc.data().name });
+    });
+    renderVoteTab();
+  });
 
   ballotUnsubscribe = ballotsRef.onSnapshot(snapshot => {
     voteCounts = {};
+    firstVoteTime = {};
     userVote = null;
 
     snapshot.forEach(doc => {
       const data = doc.data();
       const rName = data.restaurantName;
       voteCounts[rName] = (voteCounts[rName] || 0) + 1;
+
+      // Track earliest vote per restaurant for tie-breaking
+      const ts = data.timestamp ? data.timestamp.toMillis() : Infinity;
+      if (!firstVoteTime[rName] || ts < firstVoteTime[rName]) {
+        firstVoteTime[rName] = ts;
+      }
 
       if (doc.id === currentUser.uid) {
         userVote = data;
@@ -838,17 +1404,20 @@ function switchTab(tab) {
 function renderVoteTab() {
   if (currentTab !== 'vote') return;
   const content = document.getElementById('votingContent');
+  const footer = document.getElementById('votingFooter');
 
-  if (!isBeforeNoon()) {
-    // Show winner + bar chart
+  if (!isVotingOpen()) {
+    footer.innerHTML = '';
     renderResults(content);
     return;
   }
 
-  // Voting UI
-  let html = '<div class="restaurant-grid">';
+  // Voting UI — restaurant cards go in content (scrollable)
+  let cardsHtml = '<div class="restaurant-grid">';
 
-  restaurants.forEach(r => {
+  const allRestaurants = sortRestaurants(restaurants.concat(dailyExtras.filter(e => !restaurants.find(r => r.id === e.id))));
+
+  allRestaurants.forEach(r => {
     const count = voteCounts[r.name] || 0;
     const isVoted = userVote && userVote.restaurantId === r.id;
     const isDimmed = userVote && !isVoted;
@@ -856,15 +1425,15 @@ function renderVoteTab() {
     if (isVoted) classes.push('voted');
     if (isDimmed) classes.push('dimmed');
 
-    html += `<button class="${classes.join(' ')}" onclick="castVote('${r.id}', '${r.name.replace(/'/g, "\\'")}')">
+    cardsHtml += `<button class="${classes.join(' ')}" onclick="castVote('${r.id}', '${r.name.replace(/'/g, "\\'")}')">
       <span class="vote-count">${count}</span>
       <span class="restaurant-name">${r.name}</span>
     </button>`;
   });
 
-  // Check for votes on restaurants not in the group list
+  // Check for votes on restaurants not in the group list or daily extras
   Object.keys(voteCounts).forEach(name => {
-    if (!restaurants.find(r => r.name === name)) {
+    if (!allRestaurants.find(r => r.name === name)) {
       const count = voteCounts[name] || 0;
       const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       const isVoted = userVote && userVote.restaurantName === name;
@@ -872,26 +1441,47 @@ function renderVoteTab() {
       const classes = ['restaurant-btn'];
       if (isVoted) classes.push('voted');
       if (isDimmed) classes.push('dimmed');
-      html += `<button class="${classes.join(' ')}" onclick="castVote('${id}', '${name.replace(/'/g, "\\'")}')">
+      cardsHtml += `<button class="${classes.join(' ')}" onclick="castVote('${id}', '${name.replace(/'/g, "\\'")}')">
         <span class="vote-count">${count}</span>
         <span class="restaurant-name">${name}</span>
       </button>`;
     }
   });
 
-  html += `<button class="add-restaurant-btn" onclick="showAddRestaurant()" id="addBtn">+ Add Restaurant</button>`;
-  html += `<div class="add-restaurant-form" id="addForm">
-    <input type="text" id="newRestaurantName" placeholder="Restaurant name">
-    <button onclick="addRestaurant()">Add</button>
-  </div>`;
+  if (!userVote) {
+    cardsHtml += `<button class="add-restaurant-btn" onclick="showAddRestaurant()" id="addBtn">+ Add Restaurant</button>`;
+    cardsHtml += `<div class="add-restaurant-form" id="addForm">
+      <input type="text" id="newRestaurantName" placeholder="Restaurant name">
+      <button onclick="addRestaurant()">Add</button>
+    </div>`;
+  }
 
-  html += '</div>';
-  content.innerHTML = html;
+  cardsHtml += '</div>';
+  content.innerHTML = cardsHtml;
+
+  // Live results bar chart — goes in footer (fixed at bottom)
+  let footerHtml = '';
+  const sorted = Object.entries(voteCounts).sort((a, b) => b[1] - a[1] || (firstVoteTime[a[0]] || Infinity) - (firstVoteTime[b[0]] || Infinity));
+  if (sorted.length > 0) {
+    const maxVotes = sorted[0][1];
+    footerHtml += '<div class="results-chart">';
+    footerHtml += '<div class="results-chart-title">Live Results</div>';
+    sorted.forEach(([name, count]) => {
+      const pct = maxVotes > 0 ? (count / maxVotes * 100) : 0;
+      footerHtml += `<div class="chart-bar-row">
+        <div class="chart-bar-label">${name}</div>
+        <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${pct}%"></div></div>
+        <div class="chart-bar-count">${count}</div>
+      </div>`;
+    });
+    footerHtml += '</div>';
+  }
+  footer.innerHTML = footerHtml;
 }
 
 function renderResults(content) {
   // Determine winner
-  const sorted = Object.entries(voteCounts).sort((a, b) => b[1] - a[1]);
+  const sorted = Object.entries(voteCounts).sort((a, b) => b[1] - a[1] || (firstVoteTime[a[0]] || Infinity) - (firstVoteTime[b[0]] || Infinity));
 
   if (sorted.length === 0) {
     content.innerHTML = '<div class="no-votes-msg">No votes were cast today</div>';
@@ -941,10 +1531,21 @@ async function saveHistory(winner, votes) {
       console.warn('Could not save history:', e);
     }
   }
+
+  // Promote winner to permanent restaurant list if not already there
+  const winnerId = winner.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  if (!restaurants.find(r => r.id === winnerId || r.name.toLowerCase() === winner.toLowerCase())) {
+    restaurants.push({ id: winnerId, name: winner });
+    try {
+      await db.collection('groups').doc(currentGroup).update({ restaurants });
+    } catch (e) {
+      console.warn('Could not promote winner to permanent list:', e);
+    }
+  }
 }
 
 async function castVote(restaurantId, restaurantName) {
-  if (!isBeforeNoon()) {
+  if (!isVotingOpen()) {
     showToast('Voting is closed for today!');
     return;
   }
@@ -971,6 +1572,73 @@ async function castVote(restaurantId, restaurantName) {
   }
 }
 
+async function openSettings() {
+  const mgr = isManager();
+  document.getElementById('managerSettings').style.display = mgr ? 'block' : 'none';
+  if (mgr) {
+    document.getElementById('settingsCloseTime').value = groupSettings.votingCloseTime;
+  }
+  // Load group switcher
+  const groups = await loadAllGroups();
+  const container = document.getElementById('settingsGroupDropdown');
+  settingsGroupInstance = createFuzzyDropdown(container, groups, async (groupId) => {
+    if (groupId === currentGroup) { showToast('Already in this group'); return; }
+    // Check membership
+    const memberDoc = await db.collection('groups').doc(groupId).collection('members').doc(currentUser.uid).get();
+    const groupDoc = await db.collection('groups').doc(groupId).get();
+    const managers = groupDoc.exists ? (groupDoc.data().managers || []) : [];
+    if (memberDoc.exists || managers.includes(currentUser.email)) {
+      // Switch immediately
+      if (managers.includes(currentUser.email) && !memberDoc.exists) {
+        await db.collection('groups').doc(groupId).collection('members').doc(currentUser.uid).set({
+          email: currentUser.email, displayName: currentUser.displayName || currentUser.email,
+          joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }
+      await db.collection('users').doc(currentUser.uid).set({ selectedGroup: groupId }, { merge: true });
+      currentGroup = groupId;
+      closeSettings();
+      if (ballotUnsubscribe) { ballotUnsubscribe(); ballotUnsubscribe = null; }
+      if (extrasUnsubscribe) { extrasUnsubscribe(); extrasUnsubscribe = null; }
+      loadVotingScreen();
+      showToast('Switched group!');
+    } else {
+      // Check if already pending
+      const pendingDoc = await db.collection('groups').doc(groupId).collection('pendingMembers').doc(currentUser.uid).get();
+      if (!pendingDoc.exists) {
+        await db.collection('groups').doc(groupId).collection('pendingMembers').doc(currentUser.uid).set({
+          email: currentUser.email, displayName: currentUser.displayName || currentUser.email,
+          requestedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }
+      await db.collection('users').doc(currentUser.uid).set({ selectedGroup: groupId }, { merge: true });
+      closeSettings();
+      currentGroup = groupId;
+      navigateToScreen('groupScreen');
+      showPendingState();
+    }
+  }, 'Search groups...', { showCreate: true });
+  if (mgr) renderRestaurantMgmt();
+  document.getElementById('settingsOverlay').classList.add('show');
+}
+
+function closeSettings() {
+  document.getElementById('settingsOverlay').classList.remove('show');
+}
+
+async function autoSaveCloseTime() {
+  const closeTime = document.getElementById('settingsCloseTime').value;
+  if (!closeTime) return;
+  groupSettings.votingCloseTime = closeTime;
+  try {
+    await db.collection('groups').doc(currentGroup).update({ settings: groupSettings });
+    showToast(`Voting closes at ${formatCloseTime()}`);
+    updateVotingStatus();
+  } catch (e) {
+    showToast('Error saving: ' + e.message);
+  }
+}
+
 function showAddRestaurant() {
   document.getElementById('addBtn').style.display = 'none';
   document.getElementById('addForm').classList.add('show');
@@ -983,22 +1651,104 @@ async function addRestaurant() {
 
   const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
-  // Check duplicate
+  // Check duplicate against permanent list + daily extras + votes
   if (restaurants.find(r => r.id === id || r.name.toLowerCase() === name.toLowerCase())) {
     showToast('Restaurant already exists!');
     return;
   }
+  if (dailyExtras.find(r => r.id === id || r.name.toLowerCase() === name.toLowerCase())) {
+    showToast('Restaurant already added today!');
+    return;
+  }
 
-  // Add to group's restaurant list
-  restaurants.push({ id, name });
-  await db.collection('groups').doc(currentGroup).update({
-    restaurants: restaurants
-  });
+  // Add to today's daily extras subcollection (not permanent list)
+  const today = getCSTDateString();
+  await db.collection('groups').doc(currentGroup)
+    .collection('votes').doc(today)
+    .collection('extras').doc(id).set({ name });
 
-  // Auto-vote for the new restaurant
-  castVote(id, name);
+  // Auto-vote for the restaurant you added
+  await castVote(id, name);
 
+  document.getElementById('newRestaurantName').value = '';
   showToast(`Added ${name}!`);
+}
+
+// ===== RESTAURANT MANAGEMENT =====
+function renderRestaurantMgmt() {
+  const list = document.getElementById('restaurantMgmtList');
+  if (!list) return;
+  const sorted = restaurants.slice().sort((a, b) => a.name.localeCompare(b.name));
+  list.innerHTML = sorted.map(r => `
+    <li class="restaurant-mgmt-item" data-id="${r.id}">
+      <span class="restaurant-mgmt-name">${r.name}</span>
+      <div class="restaurant-mgmt-actions">
+        <button onclick="mgmtEditRestaurant('${r.id}')" title="Edit">✏️</button>
+        <button onclick="mgmtRemoveRestaurant('${r.id}')" title="Remove">🗑️</button>
+      </div>
+    </li>
+  `).join('');
+}
+
+function mgmtEditRestaurant(id) {
+  const r = restaurants.find(x => x.id === id);
+  if (!r) return;
+  const item = document.querySelector(`.restaurant-mgmt-item[data-id="${id}"]`);
+  const nameSpan = item.querySelector('.restaurant-mgmt-name');
+  const oldName = r.name;
+  nameSpan.innerHTML = `<input type="text" value="${oldName}" onkeydown="if(event.key==='Enter')mgmtSaveEdit('${id}',this)" onblur="mgmtSaveEdit('${id}',this)">`;
+  nameSpan.querySelector('input').focus();
+  nameSpan.querySelector('input').select();
+}
+
+async function mgmtSaveEdit(id, input) {
+  const newName = input.value.trim();
+  const r = restaurants.find(x => x.id === id);
+  if (!r || !newName || newName === r.name) { renderRestaurantMgmt(); return; }
+  r.name = newName;
+  try {
+    await db.collection('groups').doc(currentGroup).update({ restaurants });
+    showToast(`Renamed to ${newName}`);
+    renderRestaurantMgmt();
+    renderVoteTab();
+  } catch (e) {
+    showToast('Error: ' + e.message);
+  }
+}
+
+async function mgmtRemoveRestaurant(id) {
+  const r = restaurants.find(x => x.id === id);
+  if (!r) return;
+  if (!confirm(`Remove "${r.name}" from voting cards? It will still appear in history.`)) return;
+  restaurants = restaurants.filter(x => x.id !== id);
+  try {
+    await db.collection('groups').doc(currentGroup).update({ restaurants });
+    showToast(`Removed ${r.name}`);
+    renderRestaurantMgmt();
+    renderVoteTab();
+  } catch (e) {
+    showToast('Error: ' + e.message);
+  }
+}
+
+async function mgmtAddRestaurant() {
+  const input = document.getElementById('mgmtNewRestaurant');
+  const name = input.value.trim();
+  if (!name) return;
+  const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  if (restaurants.find(r => r.id === id || r.name.toLowerCase() === name.toLowerCase())) {
+    showToast('Restaurant already exists!'); return;
+  }
+  restaurants.push({ id, name });
+  try {
+    await db.collection('groups').doc(currentGroup).update({ restaurants });
+    input.value = '';
+    showToast(`Added ${name}`);
+    renderRestaurantMgmt();
+    renderVoteTab();
+  } catch (e) {
+    showToast('Error: ' + e.message);
+  }
 }
 
 // ===== HISTORY =====
@@ -1031,6 +1781,236 @@ async function renderHistoryTab() {
   } catch (e) {
     content.innerHTML = `<div class="no-votes-msg">Error loading history</div>`;
   }
+}
+
+// ===== PENDING MEMBERS =====
+async function loadPendingMembers() {
+  const bannerContainer = document.getElementById('pendingBanner');
+  if (!bannerContainer) return;
+
+  const snapshot = await db.collection('groups').doc(currentGroup).collection('pendingMembers').get();
+  if (snapshot.empty) {
+    bannerContainer.innerHTML = '';
+    return;
+  }
+
+  let html = '<div class="pending-banner"><div class="pending-banner-title">⏳ ' + snapshot.size + ' Pending Member Request' + (snapshot.size !== 1 ? 's' : '') + '</div>';
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    html += `<div class="pending-member-row">
+      <span class="pending-member-name">${data.displayName || data.email}</span>
+      <div class="pending-member-actions">
+        <button class="pending-approve-btn" onclick="approveMember('${doc.id}')">Approve</button>
+        <button class="pending-deny-btn" onclick="denyMember('${doc.id}')">Deny</button>
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+  bannerContainer.innerHTML = html;
+}
+
+async function approveMember(userId) {
+  const pendingRef = db.collection('groups').doc(currentGroup).collection('pendingMembers').doc(userId);
+  const pendingDoc = await pendingRef.get();
+  if (!pendingDoc.exists) { showToast('Request not found'); return; }
+
+  const data = pendingDoc.data();
+  await db.collection('groups').doc(currentGroup).collection('members').doc(userId).set({
+    email: data.email,
+    displayName: data.displayName,
+    joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  await pendingRef.delete();
+  await db.collection('users').doc(userId).set({ selectedGroup: currentGroup }, { merge: true });
+
+  showToast(`Approved ${data.displayName || data.email}! ✅`);
+  loadPendingMembers();
+}
+
+async function denyMember(userId) {
+  const pendingRef = db.collection('groups').doc(currentGroup).collection('pendingMembers').doc(userId);
+  const pendingDoc = await pendingRef.get();
+  if (!pendingDoc.exists) { showToast('Request not found'); return; }
+  const name = pendingDoc.data().displayName || pendingDoc.data().email;
+  await pendingRef.delete();
+  showToast(`Denied ${name}`);
+  loadPendingMembers();
+}
+
+// ===== FUZZY DROPDOWN =====
+function createFuzzyDropdown(container, options, onSelect, placeholder, opts) {
+  const { showCreate } = opts || {};
+  container.innerHTML = '';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.placeholder = placeholder || 'Search...';
+  const list = document.createElement('div');
+  list.className = 'fuzzy-dropdown-list';
+  container.appendChild(input);
+  container.appendChild(list);
+
+  let selectedValue = null;
+
+  function render(filter) {
+    const q = (filter || '').toLowerCase();
+    const filtered = options.filter(o => o.label.toLowerCase().includes(q));
+    if (filtered.length === 0) {
+      list.innerHTML = '<div class="fuzzy-dropdown-empty">No matches</div>';
+    } else {
+      list.innerHTML = filtered.map(o =>
+        `<div class="fuzzy-dropdown-item" data-value="${o.value}">${o.label}</div>`
+      ).join('');
+    }
+    // Pinned "Create New Group" at bottom
+    if (showCreate) {
+      list.innerHTML += '<div class="fuzzy-dropdown-create" data-action="create">+ Create New Group</div>';
+    }
+    list.querySelectorAll('.fuzzy-dropdown-item').forEach(item => {
+      item.addEventListener('click', () => {
+        selectedValue = item.dataset.value;
+        input.value = item.textContent;
+        list.classList.remove('open');
+        if (onSelect) onSelect(selectedValue);
+      });
+    });
+    const createBtn = list.querySelector('.fuzzy-dropdown-create');
+    if (createBtn) {
+      createBtn.addEventListener('click', () => {
+        list.classList.remove('open');
+        openCreateGroup();
+      });
+    }
+  }
+
+  input.addEventListener('focus', () => { render(input.value); list.classList.add('open'); });
+  input.addEventListener('input', () => { render(input.value); list.classList.add('open'); });
+  document.addEventListener('click', (e) => {
+    if (!container.contains(e.target)) list.classList.remove('open');
+  });
+
+  render('');
+  return { getSelected: () => selectedValue, setOptions: (opts) => { options = opts; render(input.value); }, input };
+}
+
+let allGroupsCache = [];
+
+async function loadAllGroups() {
+  const snapshot = await db.collection('groups').get();
+  allGroupsCache = [];
+  snapshot.forEach(doc => {
+    allGroupsCache.push({ value: doc.id, label: doc.data().name || doc.id });
+  });
+  return allGroupsCache;
+}
+
+let groupSelectInstance = null;
+let settingsGroupInstance = null;
+
+async function initGroupSelectScreen() {
+  const groups = await loadAllGroups();
+  const container = document.getElementById('groupSelectDropdown');
+  groupSelectInstance = createFuzzyDropdown(container, groups, null, 'Search groups...', { showCreate: true });
+}
+
+// ===== CREATE GROUP =====
+function openCreateGroup() {
+  document.getElementById('createGroupName').value = '';
+  document.getElementById('createGroupError').textContent = '';
+  document.getElementById('createGroupBtn').disabled = false;
+  document.getElementById('createGroupOverlay').classList.add('show');
+  setTimeout(() => document.getElementById('createGroupName').focus(), 100);
+}
+
+function closeCreateGroup() {
+  document.getElementById('createGroupOverlay').classList.remove('show');
+}
+
+async function handleCreateGroup() {
+  const nameInput = document.getElementById('createGroupName');
+  const errEl = document.getElementById('createGroupError');
+  const btn = document.getElementById('createGroupBtn');
+  const name = nameInput.value.trim();
+
+  errEl.textContent = '';
+  if (!name) { errEl.textContent = 'Please enter a group name'; return; }
+  if (name.length < 3) { errEl.textContent = 'Name must be at least 3 characters'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Creating...';
+
+  try {
+    // TODO: RevenueCat payment flow here
+    // For now, stub: skip payment and create group directly
+    // In production: verify subscription via RevenueCat before proceeding
+
+    const groupId = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+    // Check if group ID already exists
+    const existing = await db.collection('groups').doc(groupId).get();
+    if (existing.exists) {
+      errEl.textContent = 'A group with that name already exists';
+      btn.disabled = false;
+      btn.textContent = 'Subscribe & Create';
+      return;
+    }
+
+    // Check for duplicate name (case-insensitive) across all groups
+    const allGroups = await db.collection('groups').get();
+    const nameLower = name.toLowerCase();
+    let duplicate = false;
+    allGroups.forEach(doc => {
+      if ((doc.data().name || '').toLowerCase() === nameLower) duplicate = true;
+    });
+    if (duplicate) {
+      errEl.textContent = 'A group with that name already exists';
+      btn.disabled = false;
+      btn.textContent = 'Subscribe & Create';
+      return;
+    }
+
+    // Create group doc
+    await db.collection('groups').doc(groupId).set({
+      name: name,
+      managers: [currentUser.email],
+      restaurants: [],
+      settings: { votingCloseTime: '11:50', timezone: 'America/Chicago' },
+      createdBy: currentUser.uid,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      subscription: {
+        status: 'trial', // TODO: 'active' after RevenueCat confirms payment
+        platform: null,  // 'ios' | 'android' | 'web'
+        productId: null,  // RevenueCat product ID
+        expiresAt: null,  // Set by RevenueCat webhook
+        customerId: null  // RevenueCat customer ID
+      }
+    });
+
+    // Add creator as member
+    await db.collection('groups').doc(groupId).collection('members').doc(currentUser.uid).set({
+      email: currentUser.email,
+      displayName: currentUser.displayName || currentUser.email,
+      joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Set as selected group
+    await db.collection('users').doc(currentUser.uid).set({ selectedGroup: groupId }, { merge: true });
+
+    currentGroup = groupId;
+    closeCreateGroup();
+    closeSettings();
+
+    // Reload into the new group
+    if (ballotUnsubscribe) { ballotUnsubscribe(); ballotUnsubscribe = null; }
+    if (extrasUnsubscribe) { extrasUnsubscribe(); extrasUnsubscribe = null; }
+    loadVotingScreen();
+    showToast(`"${name}" created! Add restaurants in Settings ⚙️`, 5000);
+
+  } catch (e) {
+    errEl.textContent = 'Error: ' + e.message;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Subscribe & Create';
 }
 
 // ===== INIT =====
