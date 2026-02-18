@@ -1016,10 +1016,29 @@ function navigateToScreen(screenId) {
 }
 
 // ===== AUTH =====
-function googleSignIn() {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  // Always use redirect — works in both mobile browsers and Capacitor WKWebView
-  auth.signInWithRedirect(provider);
+async function googleSignIn() {
+  // Native Capacitor: use native Google sign-in via @capacitor-firebase/authentication
+  if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+    try {
+      const result = await Capacitor.Plugins.FirebaseAuthentication.signInWithGoogle();
+      const credential = firebase.auth.GoogleAuthProvider.credential(result.credential.idToken);
+      await auth.signInWithCredential(credential);
+    } catch (error) {
+      console.error('Native Google sign-in error:', error);
+      showToast('Google sign-in failed: ' + (error.message || 'Unknown error'));
+    }
+  } else {
+    // Web: popup with redirect fallback
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch(err => {
+      if (err.code === 'auth/popup-blocked' || 
+          err.code === 'auth/operation-not-supported-in-this-environment') {
+        auth.signInWithRedirect(provider);
+      } else {
+        showToast('Google sign-in failed: ' + err.message);
+      }
+    });
+  }
 }
 
 function toggleEmailForm() {
