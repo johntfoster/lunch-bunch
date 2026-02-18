@@ -349,8 +349,8 @@ exports.sendVotingReminders = onSchedule(
         .collection("notificationLog")
         .doc(today);
       const logDoc = await logRef.get();
-      if (logDoc.exists && logDoc.data().reminderSentAt) {
-        console.log(`[Reminders] Already sent for group ${groupId} today`);
+      if (logDoc.exists && logDoc.data().reminderSentAt && logDoc.data().reminderCloseTime === votingCloseTime) {
+        console.log(`[Reminders] Already sent for group ${groupId} today at ${votingCloseTime}`);
         return;
       }
 
@@ -359,7 +359,7 @@ exports.sendVotingReminders = onSchedule(
       if (recipients.length === 0) {
         console.log(`[Reminders] No opted-in users for group ${groupId}`);
         // Still mark as sent to avoid repeated checks
-        await logRef.set({ reminderSentAt: new Date() }, { merge: true });
+        await logRef.set({ reminderSentAt: new Date(), reminderCloseTime: votingCloseTime }, { merge: true });
         return;
       }
 
@@ -379,8 +379,8 @@ exports.sendVotingReminders = onSchedule(
         { type: "reminder", groupId }
       );
 
-      // Mark as sent
-      await logRef.set({ reminderSentAt: new Date() }, { merge: true });
+      // Mark as sent (include close time so changing it allows re-send)
+      await logRef.set({ reminderSentAt: new Date(), reminderCloseTime: votingCloseTime }, { merge: true });
       console.log(
         `[Reminders] Sent to ${tokens.length} users for group ${groupId} (closes ${closeDisplay})`
       );
@@ -412,20 +412,20 @@ exports.sendWinnerAnnouncements = onSchedule(
 
       if (currentTime !== votingCloseTime) return;
 
-      // Check idempotency: did we already send a winner announcement today?
+      // Check idempotency: did we already send for THIS close time today?
       const logRef = db
         .collection("groups")
         .doc(groupId)
         .collection("notificationLog")
         .doc(today);
       const logDoc = await logRef.get();
-      if (logDoc.exists && logDoc.data().winnerSentAt) {
-        console.log(`[Winners] Already sent for group ${groupId} today`);
+      if (logDoc.exists && logDoc.data().winnerSentAt && logDoc.data().winnerCloseTime === votingCloseTime) {
+        console.log(`[Winners] Already sent for group ${groupId} today at ${votingCloseTime}`);
         return;
       }
 
-      // Mark as sent immediately to prevent duplicate sends
-      await logRef.set({ winnerSentAt: new Date() }, { merge: true });
+      // Mark as sent immediately to prevent duplicate sends (include close time)
+      await logRef.set({ winnerSentAt: new Date(), winnerCloseTime: votingCloseTime }, { merge: true });
 
       // Determine winner from today's votes
       const ballotsSnap = await db
