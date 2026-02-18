@@ -1133,19 +1133,24 @@ async function handleNotifToggle(type, enabled) {
       }
     }
 
-    // Get/refresh FCM token
-    try {
-      const result = await FirebaseMessaging.getToken();
-      if (result && result.token) {
-        fcmToken = result.token;
-        await saveFcmToken(result.token);
-        showToast('🔔 Push token registered!');
-      } else {
-        showToast('⚠️ No token returned: ' + JSON.stringify(result), 5000);
+    // Get/refresh FCM token (retry with delay for APNs token to arrive)
+    let tokenObtained = false;
+    for (let attempt = 0; attempt < 3 && !tokenObtained; attempt++) {
+      try {
+        if (attempt > 0) await new Promise(r => setTimeout(r, 2000));
+        const result = await FirebaseMessaging.getToken();
+        if (result && result.token) {
+          fcmToken = result.token;
+          await saveFcmToken(result.token);
+          showToast('🔔 Push notifications enabled!');
+          tokenObtained = true;
+        }
+      } catch (e) {
+        console.error('[Push] getToken attempt ' + (attempt+1) + ':', e.message);
+        if (attempt === 2) {
+          showToast('❌ Push setup failed: ' + (e.message || 'Unknown error'), 5000);
+        }
       }
-    } catch (e) {
-      console.error('[Push] getToken error:', e);
-      showToast('❌ Token error: ' + (e.message || JSON.stringify(e)), 5000);
     }
 
     setNotifStatusMsg('');
