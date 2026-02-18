@@ -358,9 +358,17 @@
     background: var(--dark-steel); border-radius: 16px; padding: 24px;
     width: 90%; max-width: 360px; color: var(--text);
   }
+  .settings-header {
+    display: flex; align-items: center; margin-bottom: 20px; position: relative;
+  }
+  .settings-back-btn {
+    background: none; border: none; color: var(--primary); font-size: 16px;
+    font-weight: 600; cursor: pointer; padding: 4px 8px 4px 0;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  }
   .settings-title {
     font-family: 'Oswald', sans-serif; font-size: 20px; font-weight: 600;
-    text-align: center; margin-bottom: 20px; color: var(--primary);
+    color: var(--primary); flex: 1; text-align: center; padding-right: 40px;
   }
   .settings-field {
     margin-bottom: 16px;
@@ -527,8 +535,8 @@
   }
 
   .restaurant-btn .restaurant-name {
-    font-size: 12px;
-    line-height: 1.2;
+    font-size: 15px;
+    line-height: 1.3;
     color: var(--text-muted);
   }
 
@@ -909,7 +917,10 @@
     <!-- Settings Modal -->
     <div class="settings-overlay" id="settingsOverlay" onclick="closeSettings()">
       <div class="settings-modal" onclick="event.stopPropagation()">
-        <div class="settings-title">Settings</div>
+        <div class="settings-header">
+          <button class="settings-back-btn" onclick="closeSettings()">← Back</button>
+          <div class="settings-title">Settings</div>
+        </div>
         <div class="settings-field">
           <label>Switch Group</label>
           <div id="settingsGroupDropdown" class="fuzzy-dropdown"></div>
@@ -953,9 +964,7 @@
           </div>
           <div class="notif-status-msg" id="notifStatusMsg"></div>
         </div>
-        <div class="settings-actions">
-          <button class="settings-cancel" onclick="closeSettings()">Close</button>
-        </div>
+        <!-- Close button removed; use back arrow at top -->
         <button class="settings-logout" onclick="logout()">Logout</button>
       </div>
     </div>
