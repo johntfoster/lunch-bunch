@@ -1043,20 +1043,24 @@ async function initPushNotifications() {
     }
   });
 
-  // Also try getting token directly via plugin
+  // Try getting token directly via plugin (delay to let APNs token arrive)
   try {
     const perm = await FirebaseMessaging.checkPermissions();
     console.log('[Push] Permission status:', JSON.stringify(perm));
-    const result = await FirebaseMessaging.getToken();
-    if (result && result.token && currentUser) {
-      fcmToken = result.token;
-      await saveFcmToken(result.token);
-      console.log('[Push] Token obtained on init');
-    } else {
-      console.log('[Push] No token on init:', JSON.stringify(result));
+    if (perm.receive === 'granted') {
+      // Wait for APNs token to be forwarded from AppDelegate
+      await new Promise(r => setTimeout(r, 3000));
+      const result = await FirebaseMessaging.getToken();
+      if (result && result.token && currentUser) {
+        fcmToken = result.token;
+        await saveFcmToken(result.token);
+        console.log('[Push] Token obtained on init');
+      } else {
+        console.log('[Push] No token on init:', JSON.stringify(result));
+      }
     }
   } catch (e) {
-    console.log('[Push] getToken failed (permission not yet granted):', e.message);
+    console.log('[Push] getToken on init skipped:', e.message);
   }
 }
 
@@ -1148,7 +1152,10 @@ async function handleNotifToggle(type, enabled) {
       } catch (e) {
         console.error('[Push] getToken attempt ' + (attempt+1) + ':', e.message);
         if (attempt === 2) {
-          showToast('❌ Push setup failed: ' + (e.message || 'Unknown error'), 5000);
+          const msg = (e.message || '').includes('APNS')
+            ? '❌ Push notifications not yet available — APNs setup pending'
+            : '❌ Push setup failed: ' + (e.message || 'Unknown error');
+          showToast(msg, 5000);
         }
       }
     }
