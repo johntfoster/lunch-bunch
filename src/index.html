@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Lunch Bunch</title>
 <meta name="theme-color" content="#1a1a1a">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -22,7 +22,9 @@
 
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html { height: 100%; overflow: hidden; overscroll-behavior: none; touch-action: none; }
-  body { height: 100%; overflow: hidden; position: fixed; width: 100%; overscroll-behavior: none; touch-action: manipulation; }
+  body { height: 100%; overflow: hidden; position: fixed; width: 100%; overscroll-behavior: none; touch-action: manipulation; -webkit-text-size-adjust: 100%; }
+  /* Prevent iOS auto-zoom on input focus (requires font-size >= 16px) */
+  input, select, textarea { font-size: 16px !important; }
 
   :root {
     --primary: #bf5700;
@@ -1906,6 +1908,15 @@ async function openSettings() {
 
 function closeSettings() {
   document.getElementById('settingsOverlay').classList.remove('show');
+  // Reset iOS WKWebView zoom after modal/keyboard interaction
+  setTimeout(() => {
+    window.scrollTo(0, 0);
+    document.body.style.zoom = '1';
+    if (window.visualViewport) {
+      document.documentElement.style.height = window.visualViewport.height + 'px';
+      setTimeout(() => { document.documentElement.style.height = ''; }, 50);
+    }
+  }, 100);
 }
 
 async function autoSaveCloseTime() {
