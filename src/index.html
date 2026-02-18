@@ -1907,16 +1907,21 @@ async function openSettings() {
 }
 
 function closeSettings() {
+  // Blur any focused input first to dismiss keyboard and prevent viewport shift
+  const active = document.activeElement;
+  if (active && (active.tagName === 'INPUT' || active.tagName === 'SELECT' || active.tagName === 'TEXTAREA')) {
+    active.blur();
+  }
   document.getElementById('settingsOverlay').classList.remove('show');
-  // Reset iOS WKWebView zoom after modal/keyboard interaction
-  setTimeout(() => {
+  // Force layout reset for iOS WKWebView
+  requestAnimationFrame(() => {
     window.scrollTo(0, 0);
-    document.body.style.zoom = '1';
-    if (window.visualViewport) {
-      document.documentElement.style.height = window.visualViewport.height + 'px';
-      setTimeout(() => { document.documentElement.style.height = ''; }, 50);
-    }
-  }, 100);
+    document.body.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
+    // Force reflow by toggling a benign style
+    document.body.style.opacity = '0.999';
+    requestAnimationFrame(() => { document.body.style.opacity = '1'; });
+  });
 }
 
 async function autoSaveCloseTime() {
@@ -2315,6 +2320,18 @@ setTimeout(() => {
 }, 2500);
 
 // Prevent iOS rubber-band scrolling on non-scrollable areas
+// iOS WKWebView: keep viewport pinned when keyboard shows/hides
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', () => {
+    window.scrollTo(0, 0);
+    document.body.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
+  });
+  window.visualViewport.addEventListener('scroll', () => {
+    window.scrollTo(0, 0);
+  });
+}
+
 document.addEventListener('touchmove', function(e) {
   let target = e.target;
   while (target && target !== document.body) {
