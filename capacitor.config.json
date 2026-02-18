@@ -3,6 +3,12 @@
   "appName": "Lunch Bunch",
   "webDir": "src",
   "backgroundColor": "#1a1a1a",
+  "plugins": {
+    "FirebaseAuthentication": {
+      "skipNativeAuth": false,
+      "providers": ["google.com"]
+    }
+  },
   "ios": {
     "scheme": "Lunch Bunch",
     "contentInset": "always"
