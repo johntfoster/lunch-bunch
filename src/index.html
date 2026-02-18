@@ -1045,10 +1045,15 @@ async function initPushNotifications() {
 
   // Also try getting token directly via plugin
   try {
+    const perm = await FirebaseMessaging.checkPermissions();
+    console.log('[Push] Permission status:', JSON.stringify(perm));
     const result = await FirebaseMessaging.getToken();
     if (result && result.token && currentUser) {
       fcmToken = result.token;
       await saveFcmToken(result.token);
+      console.log('[Push] Token obtained on init');
+    } else {
+      console.log('[Push] No token on init:', JSON.stringify(result));
     }
   } catch (e) {
     console.log('[Push] getToken failed (permission not yet granted):', e.message);
@@ -1134,9 +1139,13 @@ async function handleNotifToggle(type, enabled) {
       if (result && result.token) {
         fcmToken = result.token;
         await saveFcmToken(result.token);
+        showToast('🔔 Push token registered!');
+      } else {
+        showToast('⚠️ No token returned: ' + JSON.stringify(result), 5000);
       }
     } catch (e) {
       console.error('[Push] getToken error:', e);
+      showToast('❌ Token error: ' + (e.message || JSON.stringify(e)), 5000);
     }
 
     setNotifStatusMsg('');
