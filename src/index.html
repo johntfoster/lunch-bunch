@@ -859,80 +859,7 @@
     margin-bottom: 12px; min-height: 18px;
   }
 
-  /* Paywall overlay */
-  .paywall-overlay {
-    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.8); z-index: 300;
-    justify-content: center; align-items: center;
-  }
-  .paywall-overlay.show { display: flex; }
-  .paywall-modal {
-    background: var(--dark-steel); border-radius: 16px; padding: 24px;
-    width: 92%; max-width: 380px; color: var(--text);
-    max-height: 85vh; overflow-y: auto; scrollbar-width: none;
-  }
-  .paywall-modal::-webkit-scrollbar { display: none; }
-  .paywall-title {
-    font-family: 'Oswald', sans-serif; font-size: 22px; font-weight: 700;
-    text-align: center; color: var(--primary); text-transform: uppercase;
-    letter-spacing: 2px; margin-bottom: 4px;
-  }
-  .paywall-subtitle {
-    text-align: center; font-size: 13px; color: var(--text-muted); margin-bottom: 6px;
-  }
-  .paywall-group-name {
-    text-align: center; font-family: 'Oswald', sans-serif; font-size: 16px;
-    color: var(--accent-gold); margin-bottom: 20px;
-  }
-  .paywall-card {
-    border: 2px solid #444; border-radius: 12px; padding: 16px;
-    margin-bottom: 12px; cursor: pointer; transition: all 0.2s;
-    background: rgba(0,0,0,0.3); position: relative;
-  }
-  .paywall-card:hover { border-color: var(--primary); transform: translateY(-1px); }
-  .paywall-card.popular {
-    border-color: var(--primary); background: rgba(191,87,0,0.1);
-  }
-  .paywall-card-badge {
-    position: absolute; top: -10px; right: 12px;
-    background: var(--primary); color: #fff; font-size: 10px;
-    font-family: 'Oswald', sans-serif; text-transform: uppercase;
-    letter-spacing: 1px; padding: 2px 10px; border-radius: 10px;
-  }
-  .paywall-card-name {
-    font-family: 'Oswald', sans-serif; font-size: 18px; font-weight: 600;
-    color: var(--text); margin-bottom: 4px;
-  }
-  .paywall-card-price {
-    font-family: 'Oswald', sans-serif; font-size: 24px; font-weight: 700;
-    color: var(--primary);
-  }
-  .paywall-card-period {
-    font-size: 13px; color: var(--text-muted); margin-bottom: 6px;
-  }
-  .paywall-card-desc {
-    font-size: 13px; color: var(--text-muted); line-height: 1.4;
-  }
-  .paywall-card-btn {
-    width: 100%; padding: 10px; border: none; border-radius: 8px;
-    background: linear-gradient(135deg, var(--primary-dark), var(--primary));
-    color: #fff; font-family: 'Oswald', sans-serif; font-size: 14px;
-    font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
-    cursor: pointer; margin-top: 10px; transition: filter 0.2s;
-  }
-  .paywall-card-btn:hover { filter: brightness(1.15); }
-  .paywall-footer {
-    text-align: center; margin-top: 8px;
-  }
-  .paywall-restore {
-    background: none; border: none; color: var(--text-muted);
-    font-size: 13px; cursor: pointer; text-decoration: underline;
-    padding: 8px;
-  }
-  .paywall-cancel {
-    background: none; border: none; color: var(--text-muted);
-    font-size: 14px; cursor: pointer; padding: 8px; width: 100%;
-  }
+  /* Paywall styles removed — using native RevenueCat UI paywall */
 </style>
 </head>
 <body>
@@ -1080,44 +1007,7 @@
   </div>
 </div>
 
-<!-- Paywall Overlay -->
-<div class="paywall-overlay" id="paywallOverlay" onclick="closePaywallOverlay()">
-  <div class="paywall-modal" onclick="event.stopPropagation()">
-    <div class="paywall-title">Choose Your Plan</div>
-    <div class="paywall-subtitle">Subscribe to create &amp; manage groups</div>
-    <div class="paywall-group-name">Creating: "<span id="paywallGroupName"></span>"</div>
-
-    <div class="paywall-card" data-product="manager_1" onclick="selectPaywallTier('single')">
-      <div class="paywall-card-name">🍔 Single Group</div>
-      <div class="paywall-card-price">$4.99</div>
-      <div class="paywall-card-period">per year</div>
-      <div class="paywall-card-desc">Manage 1 lunch group. Perfect for a single team.</div>
-      <button class="paywall-card-btn">Select</button>
-    </div>
-
-    <div class="paywall-card popular" data-product="manager_2" onclick="selectPaywallTier('plus')">
-      <div class="paywall-card-badge">Most Popular</div>
-      <div class="paywall-card-name">🍔🍔 Two Groups</div>
-      <div class="paywall-card-price">$7.99</div>
-      <div class="paywall-card-period">per year</div>
-      <div class="paywall-card-desc">Manage up to 2 lunch groups. Great for multiple teams.</div>
-      <button class="paywall-card-btn">Select</button>
-    </div>
-
-    <div class="paywall-card" data-product="manager_pro" onclick="selectPaywallTier('pro')">
-      <div class="paywall-card-name">🍔🍔🍔 Pro Manager</div>
-      <div class="paywall-card-price">$14.99</div>
-      <div class="paywall-card-period">per year</div>
-      <div class="paywall-card-desc">Manage up to 10 lunch groups. For the ultimate organizer.</div>
-      <button class="paywall-card-btn">Select</button>
-    </div>
-
-    <div class="paywall-footer">
-      <button class="paywall-restore" onclick="restorePurchases()">Restore Purchases</button>
-      <button class="paywall-cancel" onclick="closePaywallOverlay()">Cancel</button>
-    </div>
-  </div>
-</div>
+<!-- Paywall removed — using native RevenueCat UI paywall -->
 
 <script>
 // ===== FIREBASE INIT =====
@@ -1336,33 +1226,26 @@ function checkSubscriptionFromInfo(customerInfo) {
   return { tier: 'none', maxGroups: 0 };
 }
 
-async function showPaywall() {
+// Present the native RevenueCat paywall UI and return subscription info if purchased
+async function presentNativePaywall() {
   if (!window.Capacitor || !window.Capacitor.isNativePlatform()) {
     showToast('Subscriptions are only available in the iOS app', 3000);
     return null;
   }
   try {
-    const { Purchases } = window.Capacitor.Plugins;
-    const { offerings } = await Purchases.getOfferings();
-    const current = offerings.current;
-    if (!current) { showToast('No offerings available', 3000); return null; }
-    return current.availablePackages;
+    const { RevenueCatUI } = window.Capacitor.Plugins;
+    const { result } = await RevenueCatUI.presentPaywall({ displayCloseButton: true });
+    // PAYWALL_RESULT: 0 = not presented, 1 = cancelled, 2 = error, 3 = purchased, 4 = restored
+    if (result === 3 || result === 4) {
+      // Purchase or restore succeeded — get updated customer info
+      const { Purchases } = window.Capacitor.Plugins;
+      const { customerInfo } = await Purchases.getCustomerInfo();
+      return customerInfo;
+    }
+    return null; // cancelled or not presented
   } catch (e) {
-    console.error('Error fetching offerings:', e);
-    showToast('Error loading subscription options', 3000);
-    return null;
-  }
-}
-
-async function purchasePackage(pkg) {
-  try {
-    const { Purchases } = window.Capacitor.Plugins;
-    const { customerInfo } = await Purchases.purchasePackage({ aPackage: pkg });
-    return customerInfo;
-  } catch (e) {
-    if (e.code === 1) { /* user cancelled */ return null; }
-    console.error('Purchase error:', e);
-    showToast('Purchase failed: ' + e.message, 3000);
+    console.error('Paywall error:', e);
+    showToast('Error presenting subscription options: ' + e.message, 3000);
     return null;
   }
 }
@@ -1386,66 +1269,19 @@ async function restorePurchases() {
   }
 }
 
-function openPaywallOverlay(groupName) {
-  document.getElementById('paywallGroupName').textContent = groupName;
-  document.getElementById('paywallOverlay').classList.add('show');
-  // Try to load real packages from RevenueCat
-  loadPaywallPackages();
-}
-
-function closePaywallOverlay() {
-  document.getElementById('paywallOverlay').classList.remove('show');
-}
-
-let paywallPackages = null;
-
-async function loadPaywallPackages() {
-  const packages = await showPaywall();
-  if (packages) {
-    paywallPackages = packages;
-    // Update UI with real prices if available
-    packages.forEach(pkg => {
-      const id = pkg.product.identifier;
-      const priceEl = document.querySelector(`[data-product="${id}"] .paywall-card-price`);
-      if (priceEl) priceEl.textContent = pkg.product.priceString;
-    });
-  }
-}
-
-async function selectPaywallTier(tier) {
-  const tierMap = {
-    single: 'manager_1',
-    plus: 'manager_2',
-    pro: 'manager_pro'
-  };
-  const productId = tierMap[tier];
-
+// Show native paywall and create group if purchase succeeds
+async function showPaywallAndCreateGroup(groupName) {
   if (!window.Capacitor || !window.Capacitor.isNativePlatform()) {
     // On web, create group with trial status
-    closePaywallOverlay();
-    await createGroupAfterPurchase(tier, null);
+    await createGroupAfterPurchase('single', null, groupName);
     return;
   }
 
-  // Find matching package
-  if (!paywallPackages) {
-    showToast('Loading packages, please try again...', 2000);
-    await loadPaywallPackages();
-    return;
-  }
-
-  const pkg = paywallPackages.find(p => p.product.identifier === productId);
-  if (!pkg) {
-    showToast('Package not found. Try again.', 3000);
-    return;
-  }
-
-  const customerInfo = await purchasePackage(pkg);
+  const customerInfo = await presentNativePaywall();
   if (!customerInfo) return; // cancelled or failed
 
   const sub = checkSubscriptionFromInfo(customerInfo);
-  closePaywallOverlay();
-  await createGroupAfterPurchase(sub.tier, customerInfo);
+  await createGroupAfterPurchase(sub.tier, customerInfo, groupName);
 }
 
 // ===== HELPERS =====
@@ -2519,13 +2355,12 @@ async function handleCreateGroup() {
     return;
   }
 
-  // Close create group modal and show paywall
+  // Close create group modal and show native paywall
   closeCreateGroup();
-  openPaywallOverlay(name);
+  showPaywallAndCreateGroup(name);
 }
 
-async function createGroupAfterPurchase(tier, customerInfo) {
-  const name = document.getElementById('paywallGroupName').textContent;
+async function createGroupAfterPurchase(tier, customerInfo, name) {
   const groupId = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
   try {
