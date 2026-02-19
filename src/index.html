@@ -858,6 +858,81 @@
     color: var(--danger); font-size: 13px; text-align: center;
     margin-bottom: 12px; min-height: 18px;
   }
+
+  /* Paywall overlay */
+  .paywall-overlay {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.8); z-index: 300;
+    justify-content: center; align-items: center;
+  }
+  .paywall-overlay.show { display: flex; }
+  .paywall-modal {
+    background: var(--dark-steel); border-radius: 16px; padding: 24px;
+    width: 92%; max-width: 380px; color: var(--text);
+    max-height: 85vh; overflow-y: auto; scrollbar-width: none;
+  }
+  .paywall-modal::-webkit-scrollbar { display: none; }
+  .paywall-title {
+    font-family: 'Oswald', sans-serif; font-size: 22px; font-weight: 700;
+    text-align: center; color: var(--primary); text-transform: uppercase;
+    letter-spacing: 2px; margin-bottom: 4px;
+  }
+  .paywall-subtitle {
+    text-align: center; font-size: 13px; color: var(--text-muted); margin-bottom: 6px;
+  }
+  .paywall-group-name {
+    text-align: center; font-family: 'Oswald', sans-serif; font-size: 16px;
+    color: var(--accent-gold); margin-bottom: 20px;
+  }
+  .paywall-card {
+    border: 2px solid #444; border-radius: 12px; padding: 16px;
+    margin-bottom: 12px; cursor: pointer; transition: all 0.2s;
+    background: rgba(0,0,0,0.3); position: relative;
+  }
+  .paywall-card:hover { border-color: var(--primary); transform: translateY(-1px); }
+  .paywall-card.popular {
+    border-color: var(--primary); background: rgba(191,87,0,0.1);
+  }
+  .paywall-card-badge {
+    position: absolute; top: -10px; right: 12px;
+    background: var(--primary); color: #fff; font-size: 10px;
+    font-family: 'Oswald', sans-serif; text-transform: uppercase;
+    letter-spacing: 1px; padding: 2px 10px; border-radius: 10px;
+  }
+  .paywall-card-name {
+    font-family: 'Oswald', sans-serif; font-size: 18px; font-weight: 600;
+    color: var(--text); margin-bottom: 4px;
+  }
+  .paywall-card-price {
+    font-family: 'Oswald', sans-serif; font-size: 24px; font-weight: 700;
+    color: var(--primary);
+  }
+  .paywall-card-period {
+    font-size: 13px; color: var(--text-muted); margin-bottom: 6px;
+  }
+  .paywall-card-desc {
+    font-size: 13px; color: var(--text-muted); line-height: 1.4;
+  }
+  .paywall-card-btn {
+    width: 100%; padding: 10px; border: none; border-radius: 8px;
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+    color: #fff; font-family: 'Oswald', sans-serif; font-size: 14px;
+    font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+    cursor: pointer; margin-top: 10px; transition: filter 0.2s;
+  }
+  .paywall-card-btn:hover { filter: brightness(1.15); }
+  .paywall-footer {
+    text-align: center; margin-top: 8px;
+  }
+  .paywall-restore {
+    background: none; border: none; color: var(--text-muted);
+    font-size: 13px; cursor: pointer; text-decoration: underline;
+    padding: 8px;
+  }
+  .paywall-cancel {
+    background: none; border: none; color: var(--text-muted);
+    font-size: 14px; cursor: pointer; padding: 8px; width: 100%;
+  }
 </style>
 </head>
 <body>
@@ -965,6 +1040,7 @@
           <div class="notif-status-msg" id="notifStatusMsg"></div>
         </div>
         <!-- Close button removed; use back arrow at top -->
+        <button class="settings-logout" style="background:var(--primary);margin-top:16px;" onclick="restorePurchases()">Restore Purchases</button>
         <button class="settings-logout" onclick="logout()">Logout</button>
       </div>
     </div>
@@ -1001,6 +1077,45 @@
     <div class="create-group-error" id="createGroupError"></div>
     <button class="create-group-btn" id="createGroupBtn" onclick="handleCreateGroup()">Subscribe & Create</button>
     <button class="create-group-cancel" onclick="closeCreateGroup()">Cancel</button>
+  </div>
+</div>
+
+<!-- Paywall Overlay -->
+<div class="paywall-overlay" id="paywallOverlay" onclick="closePaywallOverlay()">
+  <div class="paywall-modal" onclick="event.stopPropagation()">
+    <div class="paywall-title">Choose Your Plan</div>
+    <div class="paywall-subtitle">Subscribe to create &amp; manage groups</div>
+    <div class="paywall-group-name">Creating: "<span id="paywallGroupName"></span>"</div>
+
+    <div class="paywall-card" data-product="manager_1" onclick="selectPaywallTier('single')">
+      <div class="paywall-card-name">🍔 Single Group</div>
+      <div class="paywall-card-price">$4.99</div>
+      <div class="paywall-card-period">per year</div>
+      <div class="paywall-card-desc">Manage 1 lunch group. Perfect for a single team.</div>
+      <button class="paywall-card-btn">Select</button>
+    </div>
+
+    <div class="paywall-card popular" data-product="manager_2" onclick="selectPaywallTier('plus')">
+      <div class="paywall-card-badge">Most Popular</div>
+      <div class="paywall-card-name">🍔🍔 Two Groups</div>
+      <div class="paywall-card-price">$7.99</div>
+      <div class="paywall-card-period">per year</div>
+      <div class="paywall-card-desc">Manage up to 2 lunch groups. Great for multiple teams.</div>
+      <button class="paywall-card-btn">Select</button>
+    </div>
+
+    <div class="paywall-card" data-product="manager_pro" onclick="selectPaywallTier('pro')">
+      <div class="paywall-card-name">🍔🍔🍔 Pro Manager</div>
+      <div class="paywall-card-price">$14.99</div>
+      <div class="paywall-card-period">per year</div>
+      <div class="paywall-card-desc">Manage up to 10 lunch groups. For the ultimate organizer.</div>
+      <button class="paywall-card-btn">Select</button>
+    </div>
+
+    <div class="paywall-footer">
+      <button class="paywall-restore" onclick="restorePurchases()">Restore Purchases</button>
+      <button class="paywall-cancel" onclick="closePaywallOverlay()">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -1200,6 +1315,139 @@ function updateNotifToggles() {
   }
 }
 
+// ===== REVENUECAT =====
+async function checkSubscription() {
+  if (!window.Capacitor || !window.Capacitor.isNativePlatform()) return { tier: 'none', maxGroups: 0 };
+  try {
+    const { Purchases } = window.Capacitor.Plugins;
+    const { customerInfo } = await Purchases.getCustomerInfo();
+    return checkSubscriptionFromInfo(customerInfo);
+  } catch (e) {
+    console.error('RevenueCat error:', e);
+    return { tier: 'none', maxGroups: 0 };
+  }
+}
+
+function checkSubscriptionFromInfo(customerInfo) {
+  const entitlements = customerInfo.entitlements.active;
+  if (entitlements['manager_pro']) return { tier: 'pro', maxGroups: 10 };
+  if (entitlements['manager_2']) return { tier: 'plus', maxGroups: 2 };
+  if (entitlements['manager_1']) return { tier: 'single', maxGroups: 1 };
+  return { tier: 'none', maxGroups: 0 };
+}
+
+async function showPaywall() {
+  if (!window.Capacitor || !window.Capacitor.isNativePlatform()) {
+    showToast('Subscriptions are only available in the iOS app', 3000);
+    return null;
+  }
+  try {
+    const { Purchases } = window.Capacitor.Plugins;
+    const { offerings } = await Purchases.getOfferings();
+    const current = offerings.current;
+    if (!current) { showToast('No offerings available', 3000); return null; }
+    return current.availablePackages;
+  } catch (e) {
+    console.error('Error fetching offerings:', e);
+    showToast('Error loading subscription options', 3000);
+    return null;
+  }
+}
+
+async function purchasePackage(pkg) {
+  try {
+    const { Purchases } = window.Capacitor.Plugins;
+    const { customerInfo } = await Purchases.purchasePackage({ aPackage: pkg });
+    return customerInfo;
+  } catch (e) {
+    if (e.code === 1) { /* user cancelled */ return null; }
+    console.error('Purchase error:', e);
+    showToast('Purchase failed: ' + e.message, 3000);
+    return null;
+  }
+}
+
+async function restorePurchases() {
+  if (!window.Capacitor || !window.Capacitor.isNativePlatform()) {
+    showToast('Restore is only available in the iOS app', 3000);
+    return;
+  }
+  try {
+    const { Purchases } = window.Capacitor.Plugins;
+    const { customerInfo } = await Purchases.restorePurchases();
+    const sub = checkSubscriptionFromInfo(customerInfo);
+    if (sub.tier !== 'none') {
+      showToast('Purchases restored! Tier: ' + sub.tier, 3000);
+    } else {
+      showToast('No active subscriptions found', 3000);
+    }
+  } catch (e) {
+    showToast('Restore failed: ' + e.message, 3000);
+  }
+}
+
+function openPaywallOverlay(groupName) {
+  document.getElementById('paywallGroupName').textContent = groupName;
+  document.getElementById('paywallOverlay').classList.add('show');
+  // Try to load real packages from RevenueCat
+  loadPaywallPackages();
+}
+
+function closePaywallOverlay() {
+  document.getElementById('paywallOverlay').classList.remove('show');
+}
+
+let paywallPackages = null;
+
+async function loadPaywallPackages() {
+  const packages = await showPaywall();
+  if (packages) {
+    paywallPackages = packages;
+    // Update UI with real prices if available
+    packages.forEach(pkg => {
+      const id = pkg.product.identifier;
+      const priceEl = document.querySelector(`[data-product="${id}"] .paywall-card-price`);
+      if (priceEl) priceEl.textContent = pkg.product.priceString;
+    });
+  }
+}
+
+async function selectPaywallTier(tier) {
+  const tierMap = {
+    single: 'manager_1',
+    plus: 'manager_2',
+    pro: 'manager_pro'
+  };
+  const productId = tierMap[tier];
+
+  if (!window.Capacitor || !window.Capacitor.isNativePlatform()) {
+    // On web, create group with trial status
+    closePaywallOverlay();
+    await createGroupAfterPurchase(tier, null);
+    return;
+  }
+
+  // Find matching package
+  if (!paywallPackages) {
+    showToast('Loading packages, please try again...', 2000);
+    await loadPaywallPackages();
+    return;
+  }
+
+  const pkg = paywallPackages.find(p => p.product.identifier === productId);
+  if (!pkg) {
+    showToast('Package not found. Try again.', 3000);
+    return;
+  }
+
+  const customerInfo = await purchasePackage(pkg);
+  if (!customerInfo) return; // cancelled or failed
+
+  const sub = checkSubscriptionFromInfo(customerInfo);
+  closePaywallOverlay();
+  await createGroupAfterPurchase(sub.tier, customerInfo);
+}
+
 // ===== HELPERS =====
 function getCSTDate() {
   const now = new Date();
@@ -1326,6 +1574,17 @@ auth.onAuthStateChanged(async user => {
       photoUrl: user.photoURL || '',
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
+
+    // Initialize RevenueCat
+    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+      try {
+        const { Purchases } = window.Capacitor.Plugins;
+        await Purchases.configure({ apiKey: 'appl_GMyaXtBHNNCJHzVvGcoWOXygFJv', appUserID: user.uid });
+        console.log('[RevenueCat] Configured for user', user.uid);
+      } catch (e) {
+        console.error('[RevenueCat] Configure error:', e);
+      }
+    }
 
     // Initialize push notifications and load prefs
     await loadNotifPrefs();
@@ -2242,40 +2501,37 @@ async function handleCreateGroup() {
   if (!name) { errEl.textContent = 'Please enter a group name'; return; }
   if (name.length < 3) { errEl.textContent = 'Name must be at least 3 characters'; return; }
 
-  btn.disabled = true;
-  btn.textContent = 'Creating...';
+  // Validate group name uniqueness before showing paywall
+  const groupId = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const existing = await db.collection('groups').doc(groupId).get();
+  if (existing.exists) {
+    errEl.textContent = 'A group with that name already exists';
+    return;
+  }
+  const allGroups = await db.collection('groups').get();
+  const nameLower = name.toLowerCase();
+  let duplicate = false;
+  allGroups.forEach(doc => {
+    if ((doc.data().name || '').toLowerCase() === nameLower) duplicate = true;
+  });
+  if (duplicate) {
+    errEl.textContent = 'A group with that name already exists';
+    return;
+  }
+
+  // Close create group modal and show paywall
+  closeCreateGroup();
+  openPaywallOverlay(name);
+}
+
+async function createGroupAfterPurchase(tier, customerInfo) {
+  const name = document.getElementById('paywallGroupName').textContent;
+  const groupId = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
   try {
-    // TODO: RevenueCat payment flow here
-    // For now, stub: skip payment and create group directly
-    // In production: verify subscription via RevenueCat before proceeding
+    const tierToProduct = { single: 'manager_1', plus: 'manager_2', pro: 'manager_pro' };
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform();
 
-    const groupId = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-
-    // Check if group ID already exists
-    const existing = await db.collection('groups').doc(groupId).get();
-    if (existing.exists) {
-      errEl.textContent = 'A group with that name already exists';
-      btn.disabled = false;
-      btn.textContent = 'Subscribe & Create';
-      return;
-    }
-
-    // Check for duplicate name (case-insensitive) across all groups
-    const allGroups = await db.collection('groups').get();
-    const nameLower = name.toLowerCase();
-    let duplicate = false;
-    allGroups.forEach(doc => {
-      if ((doc.data().name || '').toLowerCase() === nameLower) duplicate = true;
-    });
-    if (duplicate) {
-      errEl.textContent = 'A group with that name already exists';
-      btn.disabled = false;
-      btn.textContent = 'Subscribe & Create';
-      return;
-    }
-
-    // Create group doc
     await db.collection('groups').doc(groupId).set({
       name: name,
       managers: [currentUser.email],
@@ -2284,40 +2540,33 @@ async function handleCreateGroup() {
       createdBy: currentUser.uid,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       subscription: {
-        status: 'trial', // TODO: 'active' after RevenueCat confirms payment
-        platform: null,  // 'ios' | 'android' | 'web'
-        productId: null,  // RevenueCat product ID
-        expiresAt: null,  // Set by RevenueCat webhook
-        customerId: null  // RevenueCat customer ID
+        status: isNative ? 'active' : 'trial',
+        tier: tier,
+        platform: isNative ? 'ios' : 'web',
+        productId: tierToProduct[tier] || null,
+        expiresAt: null,
+        customerId: currentUser.uid
       }
     });
 
-    // Add creator as member
     await db.collection('groups').doc(groupId).collection('members').doc(currentUser.uid).set({
       email: currentUser.email,
       displayName: currentUser.displayName || currentUser.email,
       joinedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
 
-    // Set as selected group
     await db.collection('users').doc(currentUser.uid).set({ selectedGroup: groupId }, { merge: true });
 
     currentGroup = groupId;
-    closeCreateGroup();
     closeSettings();
 
-    // Reload into the new group
     if (ballotUnsubscribe) { ballotUnsubscribe(); ballotUnsubscribe = null; }
     if (extrasUnsubscribe) { extrasUnsubscribe(); extrasUnsubscribe = null; }
     loadVotingScreen();
     showToast(`"${name}" created! Add restaurants in Settings ⚙️`, 5000);
-
   } catch (e) {
-    errEl.textContent = 'Error: ' + e.message;
+    showToast('Error creating group: ' + e.message, 5000);
   }
-
-  btn.disabled = false;
-  btn.textContent = 'Subscribe & Create';
 }
 
 // ===== INIT =====
