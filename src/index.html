@@ -1349,7 +1349,7 @@ async function showPaywall() {
     return current.availablePackages;
   } catch (e) {
     console.error('Error fetching offerings:', e);
-    showToast('Error loading subscription options', 3000);
+    showToast('Error loading subscriptions: ' + (e.message || JSON.stringify(e)), 5000);
     return null;
   }
 }
@@ -1583,6 +1583,7 @@ auth.onAuthStateChanged(async user => {
         console.log('[RevenueCat] Configured for user', user.uid);
       } catch (e) {
         console.error('[RevenueCat] Configure error:', e);
+        showToast('[RC] Config error: ' + (e.message || JSON.stringify(e)), 5000);
       }
     }
 
