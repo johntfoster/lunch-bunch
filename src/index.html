@@ -1087,26 +1087,26 @@
     <div class="paywall-subtitle">Subscribe to create &amp; manage groups</div>
     <div class="paywall-group-name">Creating: "<span id="paywallGroupName"></span>"</div>
 
-    <div class="paywall-card" data-product="manager_1" onclick="selectPaywallTier('single')">
+    <div class="paywall-card" data-product="lunch_bunch_manager_1" onclick="selectPaywallTier('single')">
       <div class="paywall-card-name">🍔 Single Group</div>
-      <div class="paywall-card-price">$4.99</div>
+      <div class="paywall-card-price">$9.99</div>
       <div class="paywall-card-period">per year</div>
       <div class="paywall-card-desc">Manage 1 lunch group. Perfect for a single team.</div>
       <button class="paywall-card-btn">Select</button>
     </div>
 
-    <div class="paywall-card popular" data-product="manager_2" onclick="selectPaywallTier('plus')">
+    <div class="paywall-card popular" data-product="lunch_bunch_manager_2" onclick="selectPaywallTier('plus')">
       <div class="paywall-card-badge">Most Popular</div>
       <div class="paywall-card-name">🍔🍔 Two Groups</div>
-      <div class="paywall-card-price">$7.99</div>
+      <div class="paywall-card-price">$15.99</div>
       <div class="paywall-card-period">per year</div>
       <div class="paywall-card-desc">Manage up to 2 lunch groups. Great for multiple teams.</div>
       <button class="paywall-card-btn">Select</button>
     </div>
 
-    <div class="paywall-card" data-product="manager_pro" onclick="selectPaywallTier('pro')">
+    <div class="paywall-card" data-product="lunch_bunch_manager_pro" onclick="selectPaywallTier('pro')">
       <div class="paywall-card-name">🍔🍔🍔 Pro Manager</div>
-      <div class="paywall-card-price">$14.99</div>
+      <div class="paywall-card-price">$29.99</div>
       <div class="paywall-card-period">per year</div>
       <div class="paywall-card-desc">Manage up to 10 lunch groups. For the ultimate organizer.</div>
       <button class="paywall-card-btn">Select</button>
@@ -1414,9 +1414,9 @@ async function loadPaywallPackages() {
 
 async function selectPaywallTier(tier) {
   const tierMap = {
-    single: 'manager_1',
-    plus: 'manager_2',
-    pro: 'manager_pro'
+    single: 'lunch_bunch_manager_1',
+    plus: 'lunch_bunch_manager_2',
+    pro: 'lunch_bunch_manager_pro'
   };
   const productId = tierMap[tier];
 
@@ -2529,7 +2529,7 @@ async function createGroupAfterPurchase(tier, customerInfo) {
   const groupId = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
   try {
-    const tierToProduct = { single: 'manager_1', plus: 'manager_2', pro: 'manager_pro' };
+    const tierToProduct = { single: 'lunch_bunch_manager_1', plus: 'lunch_bunch_manager_2', pro: 'lunch_bunch_manager_pro' };
     const isNative = window.Capacitor && window.Capacitor.isNativePlatform();
 
     await db.collection('groups').doc(groupId).set({
