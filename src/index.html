@@ -1343,9 +1343,14 @@ async function showPaywall() {
   }
   try {
     const { Purchases } = window.Capacitor.Plugins;
-    const { offerings } = await Purchases.getOfferings();
+    const result = await Purchases.getOfferings();
+    const offerings = result?.offerings;
+    if (!offerings || !offerings.current) {
+      console.error('RevenueCat offerings response:', JSON.stringify(result));
+      showToast('No subscription offerings available. Products may still be pending App Store review.', 4000);
+      return null;
+    }
     const current = offerings.current;
-    if (!current) { showToast('No offerings available', 3000); return null; }
     return current.availablePackages;
   } catch (e) {
     console.error('Error fetching offerings:', e);
