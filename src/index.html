@@ -1080,11 +1080,11 @@
 <div class="create-group-overlay" id="createGroupOverlay" onclick="closeCreateGroup()">
   <div class="create-group-modal" onclick="event.stopPropagation()">
     <div class="create-group-title">Create a Group</div>
-    <div class="create-group-subtitle">Start your own Lunch Bunch</div>
+    <div class="create-group-subtitle">Manage unlimited lunch voting groups</div>
     <input type="text" class="create-group-input" id="createGroupName" placeholder="Group name (e.g. Marketing Team Lunch)" maxlength="50">
     <div class="create-group-price">
       <div class="create-group-price-amount">$9.99<span style="font-size:16px;font-weight:400;color:var(--text-muted)">/year</span></div>
-      <div class="create-group-price-period">Annual subscription • Cancel anytime</div>
+      <div class="create-group-price-period">Create & manage unlimited groups</div>
       <div class="create-group-price-note">Free for all members — only the manager pays</div>
     </div>
     <div class="create-group-error" id="createGroupError"></div>
@@ -1096,32 +1096,15 @@
 <!-- Paywall Overlay -->
 <div class="paywall-overlay" id="paywallOverlay" onclick="closePaywallOverlay()">
   <div class="paywall-modal" onclick="event.stopPropagation()">
-    <div class="paywall-title">Choose Your Plan</div>
-    <div class="paywall-subtitle">Subscribe to create &amp; manage groups</div>
+    <div class="paywall-title">Subscribe to Continue</div>
+    <div class="paywall-subtitle">Create &amp; manage unlimited lunch voting groups</div>
     <div class="paywall-group-name">Creating: "<span id="paywallGroupName"></span>"</div>
 
-    <div class="paywall-card" data-product="lunch_bunch_manager_1" onclick="selectPaywallTier('single')">
-      <div class="paywall-card-name">🍔 Single Group</div>
+    <div class="paywall-card" data-product="lunch_bunch_manager" onclick="selectPaywallPlan()">
+      <div class="paywall-card-name">Lunch Bunch Manager</div>
       <div class="paywall-card-price">$9.99</div>
       <div class="paywall-card-period">per year</div>
-      <div class="paywall-card-desc">Manage 1 lunch group. Perfect for a single team.</div>
-      <button class="paywall-card-btn">Select</button>
-    </div>
-
-    <div class="paywall-card popular" data-product="lunch_bunch_manager_2" onclick="selectPaywallTier('plus')">
-      <div class="paywall-card-badge">Most Popular</div>
-      <div class="paywall-card-name">🍔🍔 Two Groups</div>
-      <div class="paywall-card-price">$15.99</div>
-      <div class="paywall-card-period">per year</div>
-      <div class="paywall-card-desc">Manage up to 2 lunch groups. Great for multiple teams.</div>
-      <button class="paywall-card-btn">Select</button>
-    </div>
-
-    <div class="paywall-card" data-product="lunch_bunch_manager_pro" onclick="selectPaywallTier('pro')">
-      <div class="paywall-card-name">🍔🍔🍔 Pro Manager</div>
-      <div class="paywall-card-price">$29.99</div>
-      <div class="paywall-card-period">per year</div>
-      <div class="paywall-card-desc">Manage up to 10 lunch groups. For the ultimate organizer.</div>
+      <div class="paywall-card-desc">Create & manage unlimited lunch voting groups</div>
       <button class="paywall-card-btn">Select</button>
     </div>
 
@@ -1330,23 +1313,24 @@ function updateNotifToggles() {
 
 // ===== REVENUECAT =====
 async function checkSubscription() {
-  if (!window.Capacitor || !window.Capacitor.isNativePlatform()) return { tier: 'none', maxGroups: 0 };
+  if (!window.Capacitor || !window.Capacitor.isNativePlatform()) return { active: false };
   try {
     const { Purchases } = window.Capacitor.Plugins;
     const { customerInfo } = await Purchases.getCustomerInfo();
     return checkSubscriptionFromInfo(customerInfo);
   } catch (e) {
     console.error('RevenueCat error:', e);
-    return { tier: 'none', maxGroups: 0 };
+    return { active: false };
   }
 }
 
 function checkSubscriptionFromInfo(customerInfo) {
   const entitlements = customerInfo.entitlements.active;
-  if (entitlements['manager_pro']) return { tier: 'pro', maxGroups: 10 };
-  if (entitlements['manager_2']) return { tier: 'plus', maxGroups: 2 };
-  if (entitlements['manager_1']) return { tier: 'single', maxGroups: 1 };
-  return { tier: 'none', maxGroups: 0 };
+  // Check new entitlement first, then fallback to legacy tiers for existing subscribers
+  if (entitlements['manager'] || entitlements['manager_1'] || entitlements['manager_2'] || entitlements['manager_pro']) {
+    return { active: true };
+  }
+  return { active: false };
 }
 
 async function showPaywall() {
@@ -1394,8 +1378,8 @@ async function restorePurchases() {
     const { Purchases } = window.Capacitor.Plugins;
     const { customerInfo } = await Purchases.restorePurchases();
     const sub = checkSubscriptionFromInfo(customerInfo);
-    if (sub.tier !== 'none') {
-      showToast('Purchases restored! Tier: ' + sub.tier, 3000);
+    if (sub.active) {
+      showToast('Purchases restored! ✅', 3000);
     } else {
       showToast('No active subscriptions found', 3000);
     }
@@ -1421,38 +1405,38 @@ async function loadPaywallPackages() {
   const packages = await showPaywall();
   if (packages) {
     paywallPackages = packages;
-    // Update UI with real prices if available
-    packages.forEach(pkg => {
-      const id = pkg.product.identifier;
-      const priceEl = document.querySelector(`[data-product="${id}"] .paywall-card-price`);
+    // Update UI with real price if available (try new product first, fallback to legacy)
+    const pkg = packages.find(p => 
+      p.product.identifier === 'lunch_bunch_manager' || 
+      p.product.identifier === 'lunch_bunch_manager_1'
+    );
+    if (pkg) {
+      const priceEl = document.querySelector('.paywall-card .paywall-card-price');
       if (priceEl) priceEl.textContent = pkg.product.priceString;
-    });
+    }
   }
 }
 
-async function selectPaywallTier(tier) {
-  const tierMap = {
-    single: 'lunch_bunch_manager_1',
-    plus: 'lunch_bunch_manager_2',
-    pro: 'lunch_bunch_manager_pro'
-  };
-  const productId = tierMap[tier];
-
+async function selectPaywallPlan() {
   if (!window.Capacitor || !window.Capacitor.isNativePlatform()) {
     // On web, create group with trial status
     closePaywallOverlay();
-    await createGroupAfterPurchase(tier, null);
+    await createGroupAfterPurchase(null);
     return;
   }
 
-  // Find matching package
+  // Find matching package (try new product first, fallback to legacy)
   if (!paywallPackages) {
     showToast('Loading packages, please try again...', 2000);
     await loadPaywallPackages();
     return;
   }
 
-  const pkg = paywallPackages.find(p => p.product.identifier === productId);
+  const pkg = paywallPackages.find(p => 
+    p.product.identifier === 'lunch_bunch_manager' || 
+    p.product.identifier === 'lunch_bunch_manager_1'
+  );
+  
   if (!pkg) {
     showToast('Package not found. Try again.', 3000);
     return;
@@ -1463,7 +1447,7 @@ async function selectPaywallTier(tier) {
 
   const sub = checkSubscriptionFromInfo(customerInfo);
   closePaywallOverlay();
-  await createGroupAfterPurchase(sub.tier, customerInfo);
+  await createGroupAfterPurchase(customerInfo);
 }
 
 // ===== HELPERS =====
@@ -1807,6 +1791,10 @@ function showPendingState() {
 }
 
 // ===== VOTING =====
+let groupStatus = null; // Track current group status ('frozen' or null)
+let groupExpiresAt = null; // Track expiration date for frozen groups
+let groupDeleteAt = null; // Track deletion date for frozen groups
+
 async function loadVotingScreen() {
   navigateToScreen('votingScreen');
 
@@ -1820,6 +1808,9 @@ async function loadVotingScreen() {
     document.getElementById('groupNameDisplay').textContent = data.name || currentGroup;
     restaurants = data.restaurants || [];
     groupManagers = data.managers || [];
+    groupStatus = data.status || null;
+    groupExpiresAt = data.subscription?.expiresAt;
+    groupDeleteAt = data.subscription?.deleteAt;
     if (data.settings) {
       groupSettings = { ...groupSettings, ...data.settings };
     }
@@ -1974,6 +1965,29 @@ function renderVoteTab() {
   if (currentTab !== 'vote') return;
   const content = document.getElementById('votingContent');
   const footer = document.getElementById('votingFooter');
+
+  // Check if group is frozen
+  if (groupStatus === 'frozen') {
+    footer.innerHTML = '';
+    const isGroupManager = isManager();
+    let bannerHtml = '<div style="padding:20px;text-align:center;">';
+    bannerHtml += '<div style="background:rgba(231,76,60,0.15);border:2px solid var(--danger);border-radius:12px;padding:20px;margin-bottom:16px;">';
+    
+    if (isGroupManager) {
+      const expiredDate = groupExpiresAt ? new Date(groupExpiresAt.toMillis()).toLocaleDateString() : 'recently';
+      const deleteDate = groupDeleteAt ? new Date(groupDeleteAt.toMillis()).toLocaleDateString() : '30 days';
+      bannerHtml += `<div style="font-family:'Oswald',sans-serif;font-size:18px;color:var(--danger);margin-bottom:12px;">⚠️ Group Inactive</div>`;
+      bannerHtml += `<div style="font-size:14px;color:var(--text);line-height:1.6;margin-bottom:16px;">Your subscription expired on ${expiredDate}. Your groups will be deleted on ${deleteDate}. Resubscribe to keep them.</div>`;
+      bannerHtml += `<button onclick="openPaywallOverlay('${document.getElementById('groupNameDisplay').textContent}')" style="padding:12px 24px;border-radius:8px;border:none;background:var(--primary);color:#fff;font-family:'Oswald',sans-serif;font-size:15px;font-weight:600;cursor:pointer;">Resubscribe Now</button>`;
+    } else {
+      bannerHtml += `<div style="font-family:'Oswald',sans-serif;font-size:18px;color:var(--danger);margin-bottom:8px;">⚠️ Group Inactive</div>`;
+      bannerHtml += `<div style="font-size:14px;color:var(--text-muted);line-height:1.6;">This group is inactive — the manager's subscription has expired.</div>`;
+    }
+    
+    bannerHtml += '</div></div>';
+    content.innerHTML = bannerHtml;
+    return;
+  }
 
   if (!isVotingOpen()) {
     footer.innerHTML = '';
@@ -2198,22 +2212,15 @@ async function updateSubscriptionInfo() {
   const section = document.getElementById('subscriptionInfoSection');
   if (!section) return;
   const sub = await checkSubscription();
-  if (sub.tier === 'none') {
+  if (!sub.active) {
     section.style.display = 'none';
     return;
   }
   section.style.display = '';
-  const names = { single: 'Group Manager', plus: 'Group Manager Plus', pro: 'Group Manager Pro' };
-  const limits = { single: 1, plus: 2, pro: 10 };
-  document.getElementById('subPlanName').textContent = names[sub.tier] || sub.tier;
-  document.getElementById('subPlanBadge').textContent = sub.tier.toUpperCase();
-  // Count groups the user manages
-  const userGroups = myGroups.filter(g => g.role === 'manager');
-  const used = userGroups.length;
-  const max = limits[sub.tier] || 0;
-  document.getElementById('subGroupsInfo').innerHTML =
-    `Groups: <strong style="color:var(--text);">${used}</strong> of <strong style="color:var(--text);">${max}</strong> used` +
-    (used >= max ? '<br><span style="color:var(--primary);font-size:12px;">Upgrade to manage more groups</span>' : '');
+  document.getElementById('subPlanName').textContent = 'Lunch Bunch Manager';
+  document.getElementById('subPlanBadge').textContent = 'ACTIVE';
+  document.getElementById('subGroupsInfo').innerHTML = 
+    `<span style="color:var(--success);">● Subscription: Active</span>`;
 }
 
 function closeSettings() {
@@ -2465,9 +2472,10 @@ function createFuzzyDropdown(container, options, onSelect, placeholder, opts) {
     if (filtered.length === 0) {
       list.innerHTML = '<div class="fuzzy-dropdown-empty">No matches</div>';
     } else {
-      list.innerHTML = filtered.map(o =>
-        `<div class="fuzzy-dropdown-item" data-value="${o.value}">${o.label}</div>`
-      ).join('');
+      list.innerHTML = filtered.map(o => {
+        const dimmed = o.frozen ? ' style="opacity:0.5;"' : '';
+        return `<div class="fuzzy-dropdown-item" data-value="${o.value}"${dimmed}>${o.label}</div>`;
+      }).join('');
     }
     // Pinned "Create New Group" at bottom
     if (showCreate) {
@@ -2506,7 +2514,10 @@ async function loadAllGroups() {
   const snapshot = await db.collection('groups').get();
   allGroupsCache = [];
   snapshot.forEach(doc => {
-    allGroupsCache.push({ value: doc.id, label: doc.data().name || doc.id });
+    const data = doc.data();
+    const isFrozen = data.status === 'frozen';
+    const label = (data.name || doc.id) + (isFrozen ? ' (Inactive)' : '');
+    allGroupsCache.push({ value: doc.id, label, frozen: isFrozen });
   });
   return allGroupsCache;
 }
@@ -2566,12 +2577,11 @@ async function handleCreateGroup() {
   openPaywallOverlay(name);
 }
 
-async function createGroupAfterPurchase(tier, customerInfo) {
+async function createGroupAfterPurchase(customerInfo) {
   const name = document.getElementById('paywallGroupName').textContent;
   const groupId = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
   try {
-    const tierToProduct = { single: 'lunch_bunch_manager_1', plus: 'lunch_bunch_manager_2', pro: 'lunch_bunch_manager_pro' };
     const isNative = window.Capacitor && window.Capacitor.isNativePlatform();
 
     await db.collection('groups').doc(groupId).set({
@@ -2583,9 +2593,8 @@ async function createGroupAfterPurchase(tier, customerInfo) {
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       subscription: {
         status: isNative ? 'active' : 'trial',
-        tier: tier,
         platform: isNative ? 'ios' : 'web',
-        productId: tierToProduct[tier] || null,
+        productId: 'lunch_bunch_manager',
         expiresAt: null,
         customerId: currentUser.uid
       }
