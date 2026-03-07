@@ -112,9 +112,8 @@
     animation: pulse-glow 1.5s ease-in-out infinite;
     margin-bottom: 20px;
     filter: drop-shadow(0 0 20px rgba(191,87,0,0.6));
-    border-radius: 22px;
   }
-  .splash-icon img { width: 100%; height: 100%; border-radius: 22px; }
+  .splash-icon img { width: 100%; height: 100%; }
 
   @keyframes pulse-glow {
     0%, 100% { transform: scale(1); opacity: 0.8; }
@@ -172,8 +171,8 @@
     touch-action: pan-y;
   }
 
-  .login-logo { width: 80px; height: 80px; margin-bottom: 12px; filter: drop-shadow(0 0 16px rgba(191,87,0,0.5)); border-radius: 18px; }
-  .login-logo img { width: 100%; height: 100%; border-radius: 18px; }
+  .login-logo { width: 80px; height: 80px; margin-bottom: 12px; filter: drop-shadow(0 0 16px rgba(191,87,0,0.5)); }
+  .login-logo img { width: 100%; height: 100%; }
 
   .login-title {
     font-family: 'Oswald', sans-serif;
@@ -945,7 +944,7 @@
 
   <!-- SPLASH -->
   <div id="splashScreen" class="screen active">
-    <div class="splash-icon"><img src="app-icon-180.png" alt="Lunch Bunch"></div>
+    <div class="splash-icon"><img src="splash-logo-180.png" alt="Lunch Bunch"></div>
     <div class="splash-title">Lunch Bunch</div>
     <div class="splash-subtitle">Where are we eating?</div>
     <div class="splash-loader"><div class="splash-loader-fill"></div></div>
@@ -953,7 +952,7 @@
 
   <!-- LOGIN -->
   <div id="loginScreen" class="screen">
-    <div class="login-logo"><img src="app-icon-120.png" alt="Lunch Bunch"></div>
+    <div class="login-logo"><img src="splash-logo-120.png" alt="Lunch Bunch"></div>
     <div class="login-title">Lunch Bunch</div>
     <div class="login-tagline">Vote • Eat • Repeat</div>
 
