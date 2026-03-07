@@ -1155,6 +1155,14 @@ let fcmToken = null;
 let notifPrefs = { reminder: false, winner: false };
 let notifDays = [1, 2, 3, 4, 5]; // Mon-Fri default (1=Monday, 7=Sunday)
 
+// ===== XSS PREVENTION =====
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
 // ===== PUSH NOTIFICATIONS =====
 
 // Initialize push notifications (called after user logs in)
@@ -1175,7 +1183,6 @@ async function initPushNotifications() {
   // Try getting token directly via plugin (delay to let APNs token arrive)
   try {
     const perm = await FirebaseMessaging.checkPermissions();
-    console.log('[Push] Permission status:', JSON.stringify(perm));
     if (perm.receive === 'granted') {
       // Wait for APNs token to be forwarded from AppDelegate
       await new Promise(r => setTimeout(r, 3000));
@@ -1183,13 +1190,10 @@ async function initPushNotifications() {
       if (result && result.token && currentUser) {
         fcmToken = result.token;
         await saveFcmToken(result.token);
-        console.log('[Push] Token obtained on init');
-      } else {
-        console.log('[Push] No token on init:', JSON.stringify(result));
       }
     }
   } catch (e) {
-    console.log('[Push] getToken on init skipped:', e.message);
+    // getToken on init skipped
   }
 }
 
@@ -1201,7 +1205,6 @@ async function saveFcmToken(token) {
       fcmToken: token,
       fcmTokenUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
-    console.log('[Push] FCM token saved');
   } catch (e) {
     console.error('[Push] Failed to save FCM token:', e);
   }
@@ -1392,7 +1395,6 @@ async function showPaywall() {
   try {
     const { Purchases } = window.Capacitor.Plugins;
     const offerings = await Purchases.getOfferings();
-    console.log('RevenueCat offerings:', JSON.stringify(offerings));
     const current = offerings?.current;
     if (!current) {
       console.error('RevenueCat offerings response:', JSON.stringify(offerings));
@@ -1658,7 +1660,6 @@ auth.onAuthStateChanged(async user => {
       try {
         const { Purchases } = window.Capacitor.Plugins;
         await Purchases.configure({ apiKey: 'appl_GMyaXtBHNNCJHzVvGcoWOXygFJv', appUserID: user.uid });
-        console.log('[RevenueCat] Configured for user', user.uid);
       } catch (e) {
         console.error('[RevenueCat] Configure error:', e);
         showToast('[RC] Config error: ' + (e.message || JSON.stringify(e)), 5000);
@@ -1752,7 +1753,6 @@ async function handleApproval(approveParam) {
       displayName: data.displayName,
       joinedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-    console.log('Added to members collection');
   } catch (e) {
     console.error('Failed to add to members:', e);
     showToast('Error adding member: ' + e.message);
@@ -1761,7 +1761,6 @@ async function handleApproval(approveParam) {
 
   try {
     await pendingRef.delete();
-    console.log('Deleted pending request');
   } catch (e) {
     console.error('Failed to delete pending:', e);
   }
@@ -1769,7 +1768,6 @@ async function handleApproval(approveParam) {
   // Set approved user's selectedGroup
   try {
     await db.collection('users').doc(userId).set({ selectedGroup: groupId }, { merge: true });
-    console.log('Set selectedGroup for user', userId);
   } catch (e) {
     console.error('Failed to set selectedGroup:', e);
     // Non-critical — user can still select group on next login
@@ -1891,16 +1889,9 @@ async function loadVotingScreen() {
     if (data.settings) {
       groupSettings = { ...groupSettings, ...data.settings };
     }
-    // One-time cleanup: remove Wingstop from permanent list (safe to remove after 2026-02-17)
-    const _before = restaurants.length;
-    restaurants = restaurants.filter(r => r.name !== 'Wingstop');
-    if (restaurants.length < _before) {
-      await db.collection('groups').doc(currentGroup).update({ restaurants });
-    }
-    // Seed managers if not set
+    // Check for missing managers
     if (groupManagers.length === 0) {
-      groupManagers = ['johntfosterjr@gmail.com'];
-      await db.collection('groups').doc(currentGroup).update({ managers: groupManagers });
+      console.warn('Group has no managers:', currentGroup);
     }
     // Seed settings if not set
     if (!data.settings) {
@@ -2085,9 +2076,9 @@ function renderVoteTab() {
     if (isVoted) classes.push('voted');
     if (isDimmed) classes.push('dimmed');
 
-    cardsHtml += `<button class="${classes.join(' ')}" onclick="castVote('${r.id}', '${r.name.replace(/'/g, "\\'")}')">
+    cardsHtml += `<button class="${classes.join(' ')}" onclick="castVote('${escapeHtml(r.id)}', '${escapeHtml(r.name).replace(/'/g, "\\'")}')">
       <span class="vote-count">${count}</span>
-      <span class="restaurant-name">${r.name}</span>
+      <span class="restaurant-name">${escapeHtml(r.name)}</span>
     </button>`;
   });
 
@@ -2101,9 +2092,9 @@ function renderVoteTab() {
       const classes = ['restaurant-btn'];
       if (isVoted) classes.push('voted');
       if (isDimmed) classes.push('dimmed');
-      cardsHtml += `<button class="${classes.join(' ')}" onclick="castVote('${id}', '${name.replace(/'/g, "\\'")}')">
+      cardsHtml += `<button class="${classes.join(' ')}" onclick="castVote('${escapeHtml(id)}', '${escapeHtml(name).replace(/'/g, "\\'")}')">
         <span class="vote-count">${count}</span>
-        <span class="restaurant-name">${name}</span>
+        <span class="restaurant-name">${escapeHtml(name)}</span>
       </button>`;
     }
   });
@@ -2129,7 +2120,7 @@ function renderVoteTab() {
     sorted.forEach(([name, count]) => {
       const pct = maxVotes > 0 ? (count / maxVotes * 100) : 0;
       footerHtml += `<div class="chart-bar-row">
-        <div class="chart-bar-label">${name}</div>
+        <div class="chart-bar-label">${escapeHtml(name)}</div>
         <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${pct}%"></div></div>
         <div class="chart-bar-count">${count}</div>
       </div>`;
@@ -2154,7 +2145,7 @@ function renderResults(content) {
   let html = `<div class="winner-display">
     <div class="winner-trophy">🏆</div>
     <div class="winner-label">Today's Winner</div>
-    <div class="winner-name">${winner}</div>
+    <div class="winner-name">${escapeHtml(winner)}</div>
     <div class="winner-votes">${maxVotes} vote${maxVotes !== 1 ? 's' : ''}</div>
   </div>`;
 
@@ -2165,7 +2156,7 @@ function renderResults(content) {
   sorted.forEach(([name, count]) => {
     const pct = maxVotes > 0 ? (count / maxVotes * 100) : 0;
     html += `<div class="chart-bar-row">
-      <div class="chart-bar-label">${name}</div>
+      <div class="chart-bar-label">${escapeHtml(name)}</div>
       <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${pct}%"></div></div>
       <div class="chart-bar-count">${count}</div>
     </div>`;
@@ -2372,11 +2363,11 @@ function renderRestaurantMgmt() {
   if (!list) return;
   const sorted = restaurants.slice().sort((a, b) => a.name.localeCompare(b.name));
   list.innerHTML = sorted.map(r => `
-    <li class="restaurant-mgmt-item" data-id="${r.id}">
-      <span class="restaurant-mgmt-name">${r.name}</span>
+    <li class="restaurant-mgmt-item" data-id="${escapeHtml(r.id)}">
+      <span class="restaurant-mgmt-name">${escapeHtml(r.name)}</span>
       <div class="restaurant-mgmt-actions">
-        <button onclick="mgmtEditRestaurant('${r.id}')" title="Edit">✏️</button>
-        <button onclick="mgmtRemoveRestaurant('${r.id}')" title="Remove">🗑️</button>
+        <button onclick="mgmtEditRestaurant('${escapeHtml(r.id)}')" title="Edit">✏️</button>
+        <button onclick="mgmtRemoveRestaurant('${escapeHtml(r.id)}')" title="Remove">🗑️</button>
       </div>
     </li>
   `).join('');
@@ -2465,7 +2456,7 @@ async function renderHistoryTab() {
       const data = doc.data();
       html += `<li class="history-item">
         <span class="history-date">${formatDate(doc.id)}</span>
-        <span class="history-winner">🏆 ${data.winner}</span>
+        <span class="history-winner">🏆 ${escapeHtml(data.winner)}</span>
       </li>`;
     });
     html += '</ul>';
@@ -2490,10 +2481,10 @@ async function loadPendingMembers() {
   snapshot.forEach(doc => {
     const data = doc.data();
     html += `<div class="pending-member-row">
-      <span class="pending-member-name">${data.displayName || data.email}</span>
+      <span class="pending-member-name">${escapeHtml(data.displayName || data.email)}</span>
       <div class="pending-member-actions">
-        <button class="pending-approve-btn" onclick="approveMember('${doc.id}')">Approve</button>
-        <button class="pending-deny-btn" onclick="denyMember('${doc.id}')">Deny</button>
+        <button class="pending-approve-btn" onclick="approveMember('${escapeHtml(doc.id)}')">Approve</button>
+        <button class="pending-deny-btn" onclick="denyMember('${escapeHtml(doc.id)}')">Deny</button>
       </div>
     </div>`;
   });
@@ -2551,7 +2542,7 @@ function createFuzzyDropdown(container, options, onSelect, placeholder, opts) {
     } else {
       list.innerHTML = filtered.map(o => {
         const dimmed = o.frozen ? ' style="opacity:0.5;"' : '';
-        return `<div class="fuzzy-dropdown-item" data-value="${o.value}"${dimmed}>${o.label}</div>`;
+        return `<div class="fuzzy-dropdown-item" data-value="${escapeHtml(o.value)}"${dimmed}>${escapeHtml(o.label)}</div>`;
       }).join('');
     }
     // Pinned "Create New Group" at bottom

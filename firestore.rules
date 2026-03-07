@@ -2,29 +2,34 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users can read/write their own doc; any authenticated user can update selectedGroup
-    match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null;
-      allow delete: if request.auth != null && request.auth.uid == userId;
+    // Helper to check if user is a group manager
+    function isManager(groupId) {
+      return request.auth.token.email in get(/databases/$(database)/documents/groups/$(groupId)).data.managers;
     }
 
-    // Groups: any authenticated user can read (including list) and write
+    // Users can only read/write their own document
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Groups: read by any authenticated user, write restricted
     match /groups/{groupId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && isManager(groupId);
 
       // Members subcollection
       match /members/{memberId} {
         allow read: if request.auth != null;
-        allow write: if request.auth != null;
+        allow create: if request.auth != null;
+        allow delete: if request.auth != null && (request.auth.uid == memberId || isManager(groupId));
       }
 
       // Pending members subcollection
       match /pendingMembers/{memberId} {
-        allow read: if request.auth != null;
-        allow write: if request.auth != null;
+        allow read: if request.auth != null && isManager(groupId);
+        allow create: if request.auth != null;
+        allow delete: if request.auth != null && isManager(groupId);
       }
 
       // Votes document
@@ -34,8 +39,8 @@ service cloud.firestore {
         // Ballots subcollection
         match /ballots/{userId} {
           allow read: if request.auth != null;
-          allow create, update: if request.auth != null && request.auth.uid == userId; // TEMPORARY: update allowed for testing
-          allow delete: if request.auth != null; // TEMPORARY: for testing
+          allow create: if request.auth != null && request.auth.uid == userId && !exists(/databases/$(database)/documents/groups/$(groupId)/votes/$(dateId)/ballots/$(userId));
+          allow update, delete: if false;
         }
 
         // Daily extras subcollection
@@ -49,6 +54,11 @@ service cloud.firestore {
         allow read: if request.auth != null;
         allow create: if request.auth != null;
         allow update, delete: if false;
+      }
+
+      // Notification log: deny client access (only Cloud Functions)
+      match /notificationLog/{dateId} {
+        allow read, write: if false;
       }
     }
   }

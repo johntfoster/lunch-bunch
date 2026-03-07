@@ -12,20 +12,22 @@ initializeApp();
 const db = getFirestore();
 const SENDGRID_API_KEY = defineSecret("SENDGRID_API_KEY");
 const REVENUECAT_WEBHOOK_SECRET = defineSecret("REVENUECAT_WEBHOOK_SECRET");
-
-// Simple HMAC token for approve/deny links (no login needed)
-const APPROVE_SECRET = "lunch-bunch-approve-secret-2026";
+const APPROVE_SECRET = defineSecret("APPROVE_SECRET");
 
 function makeToken(action, groupId, userId) {
   return crypto
-    .createHmac("sha256", APPROVE_SECRET)
+    .createHmac("sha256", APPROVE_SECRET.value())
     .update(`${action}:${groupId}:${userId}`)
     .digest("hex")
     .substring(0, 16);
 }
 
 // HTTP endpoint: /approve?g=groupId&u=userId&t=token
-exports.approveMember = onRequest(async (req, res) => {
+exports.approveMember = onRequest(
+  {
+    secrets: [APPROVE_SECRET],
+  },
+  async (req, res) => {
   const { g: groupId, u: userId, t: token, action } = req.query;
   const act = action || "approve";
 
@@ -121,7 +123,7 @@ function resultPage(title, message, groupName, emoji = "🍔") {
 exports.onPendingMemberCreated = onDocumentCreated(
   {
     document: "groups/{groupId}/pendingMembers/{userId}",
-    secrets: [SENDGRID_API_KEY],
+    secrets: [SENDGRID_API_KEY, APPROVE_SECRET],
   },
   async (event) => {
     const { groupId, userId } = event.params;
@@ -278,8 +280,6 @@ async function getGroupNotifRecipients(groupId, prefKey, currentDay = null) {
     const token = data.fcmToken;
     if (!token) return;
     if (!prefs[prefKey]) return;
-    // Confirm this user's selectedGroup is actually this group
-    if (data.selectedGroup !== groupId) return;
     
     // Check if today is in user's active notification days
     if (currentDay !== null) {
@@ -475,9 +475,11 @@ exports.sendWinnerAnnouncements = onSchedule(
         return;
       }
 
-      // Find winner (most votes; ties go to whichever was sorted first alphabetically)
-      const winner = Object.entries(tally)
-        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0];
+      // Find winner (most votes; ties broken randomly)
+      const sorted = Object.entries(tally).sort((a, b) => b[1] - a[1]);
+      const maxVotes = sorted[0][1];
+      const tied = sorted.filter(([_, v]) => v === maxVotes);
+      const winner = tied[Math.floor(Math.random() * tied.length)][0];
       const winnerVotes = tally[winner];
       const totalVotes = Object.values(tally).reduce((s, v) => s + v, 0);
 
@@ -676,7 +678,7 @@ exports.cleanupFrozenGroups = onSchedule(
           console.log(`[Cleanup] Notified ${memberTokens.length} members of ${groupName} deletion`);
         }
 
-        // Delete subcollections
+        // Delete subcollections (delete nested collections first, then parent docs)
         const subcollections = ["votes", "members", "pendingMembers", "notificationLog"];
         for (const subcollection of subcollections) {
           const subcollectionSnap = await db
@@ -685,21 +687,24 @@ exports.cleanupFrozenGroups = onSchedule(
             .collection(subcollection)
             .get();
 
-          // Delete each document in the subcollection
-          const deletePromises = subcollectionSnap.docs.map((doc) => doc.ref.delete());
-          await Promise.all(deletePromises);
-
-          // For votes, also delete ballots and extras subcollections
+          // For votes, delete nested subcollections first
           if (subcollection === "votes") {
             for (const voteDoc of subcollectionSnap.docs) {
+              // 1. Delete ballots subcollection
               const ballotsSnap = await voteDoc.ref.collection("ballots").get();
-              const extrasSnap = await voteDoc.ref.collection("extras").get();
+              await Promise.all(ballotsSnap.docs.map((doc) => doc.ref.delete()));
               
-              await Promise.all([
-                ...ballotsSnap.docs.map((doc) => doc.ref.delete()),
-                ...extrasSnap.docs.map((doc) => doc.ref.delete()),
-              ]);
+              // 2. Delete extras subcollection
+              const extrasSnap = await voteDoc.ref.collection("extras").get();
+              await Promise.all(extrasSnap.docs.map((doc) => doc.ref.delete()));
+              
+              // 3. Delete the vote doc itself
+              await voteDoc.ref.delete();
             }
+          } else {
+            // Delete each document in the subcollection
+            const deletePromises = subcollectionSnap.docs.map((doc) => doc.ref.delete());
+            await Promise.all(deletePromises);
           }
         }
 
