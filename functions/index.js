@@ -779,3 +779,12 @@ exports.cleanupFrozenGroups = onSchedule(
     console.log("[Cleanup] Frozen group cleanup completed");
   }
 );
+
+// Export helper functions for testing
+exports.makeToken = makeToken;
+exports.getCSTDateString = getCSTDateString;
+exports.getCSTDayOfWeek = getCSTDayOfWeek;
+exports.getCSTTimeString = getCSTTimeString;
+exports.subtractMinutes = subtractMinutes;
+exports.getGroupNotifRecipients = getGroupNotifRecipients;
+exports.sendFcmNotifications = sendFcmNotifications;
