@@ -11,6 +11,7 @@ const sgMail = require("@sendgrid/mail");
 initializeApp();
 const db = getFirestore();
 const SENDGRID_API_KEY = defineSecret("SENDGRID_API_KEY");
+const REVENUECAT_WEBHOOK_SECRET = defineSecret("REVENUECAT_WEBHOOK_SECRET");
 
 // Simple HMAC token for approve/deny links (no login needed)
 const APPROVE_SECRET = "lunch-bunch-approve-secret-2026";
@@ -483,5 +484,273 @@ exports.sendWinnerAnnouncements = onSchedule(
     });
 
     await Promise.all(groupPromises);
+  }
+);
+
+// ===== REVENUECAT WEBHOOK HANDLER =====
+// Handles subscription lifecycle events from RevenueCat
+exports.onRevenueCatWebhook = onRequest(
+  {
+    secrets: [REVENUECAT_WEBHOOK_SECRET],
+  },
+  async (req, res) => {
+    // Authenticate webhook request
+    const authHeader = req.headers["authorization"];
+    if (!authHeader || authHeader !== `Bearer ${REVENUECAT_WEBHOOK_SECRET.value()}`) {
+      console.error("[RevenueCat] Unauthorized webhook request");
+      res.status(401).send("Unauthorized");
+      return;
+    }
+
+    const event = req.body;
+    const eventType = event?.event?.type;
+    const appUserId = event?.event?.app_user_id;
+
+    if (!eventType || !appUserId) {
+      console.error("[RevenueCat] Missing event type or app_user_id");
+      res.status(400).send("Bad request");
+      return;
+    }
+
+    console.log(`[RevenueCat] Received ${eventType} for user ${appUserId}`);
+
+    try {
+      const userRef = db.collection("users").doc(appUserId);
+      const userDoc = await userRef.get();
+
+      if (!userDoc.exists) {
+        console.warn(`[RevenueCat] User ${appUserId} not found in Firestore`);
+        res.status(200).send("OK");
+        return;
+      }
+
+      const userEmail = userDoc.data().email;
+
+      // Handle activation events
+      if (["INITIAL_PURCHASE", "RENEWAL", "UNCANCELLATION"].includes(eventType)) {
+        // Set user subscription to active
+        await userRef.update({
+          subscriptionStatus: "active",
+          groupsFrozenAt: null,
+          groupsDeleteAt: null,
+        });
+
+        // Find all frozen groups where user is a manager and reactivate them
+        const frozenGroupsSnap = await db
+          .collection("groups")
+          .where("managers", "array-contains", userEmail)
+          .where("status", "==", "frozen")
+          .get();
+
+        const reactivatePromises = frozenGroupsSnap.docs.map((groupDoc) =>
+          db.collection("groups").doc(groupDoc.id).update({
+            status: "active",
+            frozenAt: null,
+            deleteAt: null,
+            warningNotificationSent: null,
+          })
+        );
+
+        await Promise.all(reactivatePromises);
+
+        console.log(
+          `[RevenueCat] Activated subscription for ${appUserId}, reactivated ${frozenGroupsSnap.size} groups`
+        );
+      }
+      // Handle expiration/cancellation events
+      else if (["EXPIRATION", "CANCELLATION"].includes(eventType)) {
+        const now = new Date();
+        const fourWeeksLater = new Date(now.getTime() + 28 * 24 * 60 * 60 * 1000);
+
+        // Set user subscription to expired
+        await userRef.update({
+          subscriptionStatus: "expired",
+          groupsFrozenAt: now,
+          groupsDeleteAt: fourWeeksLater,
+        });
+
+        // Find all active groups where user is a manager and freeze them
+        const activeGroupsSnap = await db
+          .collection("groups")
+          .where("managers", "array-contains", userEmail)
+          .where("status", "==", "active")
+          .get();
+
+        const freezePromises = activeGroupsSnap.docs.map((groupDoc) =>
+          db.collection("groups").doc(groupDoc.id).update({
+            status: "frozen",
+            frozenAt: now,
+            deleteAt: fourWeeksLater,
+          })
+        );
+
+        await Promise.all(freezePromises);
+
+        console.log(
+          `[RevenueCat] Expired subscription for ${appUserId}, froze ${activeGroupsSnap.size} groups`
+        );
+      }
+
+      res.status(200).send("OK");
+    } catch (error) {
+      console.error("[RevenueCat] Error processing webhook:", error);
+      res.status(500).send("Internal server error");
+    }
+  }
+);
+
+// ===== SCHEDULED: CLEANUP FROZEN GROUPS =====
+// Runs daily at midnight CST to delete expired groups and send warnings
+exports.cleanupFrozenGroups = onSchedule(
+  {
+    schedule: "0 0 * * *", // Daily at midnight
+    timeZone: "America/Chicago",
+  },
+  async () => {
+    const now = new Date();
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    console.log(`[Cleanup] Starting frozen group cleanup at ${now.toISOString()}`);
+
+    // === Delete groups that have reached their deleteAt time ===
+    const groupsToDeleteSnap = await db
+      .collection("groups")
+      .where("status", "==", "frozen")
+      .where("deleteAt", "<=", now)
+      .get();
+
+    console.log(`[Cleanup] Found ${groupsToDeleteSnap.size} groups to delete`);
+
+    for (const groupDoc of groupsToDeleteSnap.docs) {
+      const groupId = groupDoc.id;
+      const groupData = groupDoc.data();
+      const groupName = groupData.name || groupId;
+
+      try {
+        // Get all members to notify them
+        const membersSnap = await db
+          .collection("groups")
+          .doc(groupId)
+          .collection("members")
+          .get();
+
+        // Collect FCM tokens from members
+        const memberTokens = [];
+        for (const memberDoc of membersSnap.docs) {
+          const memberId = memberDoc.id;
+          const userDoc = await db.collection("users").doc(memberId).get();
+          if (userDoc.exists) {
+            const token = userDoc.data().fcmToken;
+            if (token) memberTokens.push(token);
+          }
+        }
+
+        // Send deletion notification to all members
+        if (memberTokens.length > 0) {
+          await sendFcmNotifications(
+            memberTokens,
+            "Group Deleted",
+            `${groupName} has been deleted because the manager's subscription expired.`,
+            { type: "group_deleted", groupId }
+          );
+          console.log(`[Cleanup] Notified ${memberTokens.length} members of ${groupName} deletion`);
+        }
+
+        // Delete subcollections
+        const subcollections = ["votes", "members", "pendingMembers", "notificationLog"];
+        for (const subcollection of subcollections) {
+          const subcollectionSnap = await db
+            .collection("groups")
+            .doc(groupId)
+            .collection(subcollection)
+            .get();
+
+          // Delete each document in the subcollection
+          const deletePromises = subcollectionSnap.docs.map((doc) => doc.ref.delete());
+          await Promise.all(deletePromises);
+
+          // For votes, also delete ballots and extras subcollections
+          if (subcollection === "votes") {
+            for (const voteDoc of subcollectionSnap.docs) {
+              const ballotsSnap = await voteDoc.ref.collection("ballots").get();
+              const extrasSnap = await voteDoc.ref.collection("extras").get();
+              
+              await Promise.all([
+                ...ballotsSnap.docs.map((doc) => doc.ref.delete()),
+                ...extrasSnap.docs.map((doc) => doc.ref.delete()),
+              ]);
+            }
+          }
+        }
+
+        // Delete the group document
+        await db.collection("groups").doc(groupId).delete();
+        console.log(`[Cleanup] Deleted group ${groupId} (${groupName})`);
+      } catch (error) {
+        console.error(`[Cleanup] Error deleting group ${groupId}:`, error);
+      }
+    }
+
+    // === Send 7-day warnings to managers ===
+    const groupsToWarnSnap = await db
+      .collection("groups")
+      .where("status", "==", "frozen")
+      .where("deleteAt", "<=", sevenDaysFromNow)
+      .where("deleteAt", ">", now)
+      .get();
+
+    console.log(`[Cleanup] Found ${groupsToWarnSnap.size} groups within 7-day warning window`);
+
+    for (const groupDoc of groupsToWarnSnap.docs) {
+      const groupId = groupDoc.id;
+      const groupData = groupDoc.data();
+      const groupName = groupData.name || groupId;
+
+      // Skip if warning already sent
+      if (groupData.warningNotificationSent) {
+        continue;
+      }
+
+      try {
+        const managers = groupData.managers || [];
+        const managerTokens = [];
+
+        // Get FCM tokens for managers
+        for (const managerEmail of managers) {
+          // Find user by email
+          const usersSnap = await db
+            .collection("users")
+            .where("email", "==", managerEmail)
+            .limit(1)
+            .get();
+
+          if (!usersSnap.empty) {
+            const userDoc = usersSnap.docs[0];
+            const token = userDoc.data().fcmToken;
+            if (token) managerTokens.push(token);
+          }
+        }
+
+        if (managerTokens.length > 0) {
+          await sendFcmNotifications(
+            managerTokens,
+            "⚠️ Groups Expiring Soon",
+            `Your groups will be deleted in 7 days. Resubscribe now to keep ${groupName} and your other groups.`,
+            { type: "expiration_warning", groupId }
+          );
+
+          // Mark warning as sent
+          await db.collection("groups").doc(groupId).update({
+            warningNotificationSent: true,
+          });
+
+          console.log(`[Cleanup] Sent 7-day warning for group ${groupId} to ${managerTokens.length} managers`);
+        }
+      } catch (error) {
+        console.error(`[Cleanup] Error sending warning for group ${groupId}:`, error);
+      }
+    }
+
+    console.log("[Cleanup] Frozen group cleanup completed");
   }
 );
