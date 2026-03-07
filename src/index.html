@@ -302,6 +302,8 @@
   .voting-header {
     text-align: center;
     padding: 12px 16px 10px;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
+    margin-top: calc(-1 * env(safe-area-inset-top, 0px));
     background: linear-gradient(180deg, rgba(44,44,44,0.95), rgba(26,26,26,0.9));
     border-bottom: 2px solid var(--primary);
     flex-shrink: 0;
