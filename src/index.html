@@ -688,32 +688,28 @@
     padding: 40px 20px; font-size: 15px;
   }
 
-  .pending-banner {
-    background: rgba(196, 132, 29, 0.15);
-    border: 1px solid var(--accent-gold);
-    border-radius: 10px;
-    padding: 12px 16px;
+  /* Pending member notification banner */
+  .pending-notification-banner {
+    background: rgba(255,255,255,0.03);
+    border-left: 3px solid var(--primary);
+    padding: 10px 16px;
     margin: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
     flex-shrink: 0;
   }
-  .pending-banner-title {
-    font-family: 'Oswald', sans-serif;
-    font-size: 13px; color: var(--accent-gold);
-    text-transform: uppercase; letter-spacing: 1px;
-    margin-bottom: 8px;
+  .pending-notification-banner:hover {
+    background: rgba(255,255,255,0.05);
   }
-  .pending-member-row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 6px 0; font-size: 14px;
+  .pending-notification-text {
+    font-size: 13px;
+    color: var(--text);
   }
-  .pending-member-name { color: var(--text); }
-  .pending-member-actions { display: flex; gap: 8px; }
-  .pending-approve-btn, .pending-deny-btn {
-    padding: 4px 12px; border-radius: 6px; border: none;
-    font-size: 12px; font-weight: 600; cursor: pointer;
+  .pending-notification-count {
+    color: var(--primary);
+    font-weight: 600;
   }
-  .pending-approve-btn { background: var(--success); color: #1a1a1a; }
-  .pending-deny-btn { background: var(--danger); color: #fff; }
 
   /* Toast */
   .toast {
@@ -804,6 +800,86 @@
     padding: 8px 14px; border-radius: 8px; border: none;
     background: var(--primary); color: #fff; font-size: 13px;
     font-weight: 600; cursor: pointer; white-space: nowrap;
+  }
+
+  /* Members Management */
+  .members-subsection-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 13px; color: var(--accent-gold);
+    text-transform: uppercase; letter-spacing: 1px;
+    margin: 12px 0 8px 0;
+  }
+  .members-list { display: flex; flex-direction: column; gap: 8px; }
+  .member-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .member-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .member-name {
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .member-badge {
+    background: var(--primary);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-family: 'Oswald', sans-serif;
+    letter-spacing: 0.5px;
+  }
+  .member-email {
+    color: var(--text-muted);
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .member-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .member-approve-btn, .member-deny-btn, .member-remove-btn {
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .member-approve-btn {
+    background: var(--primary);
+    color: #fff;
+  }
+  .member-approve-btn:hover { opacity: 0.9; }
+  .member-deny-btn {
+    background: rgba(255,255,255,0.05);
+    color: #e74c3c;
+  }
+  .member-deny-btn:hover { background: rgba(231,76,60,0.1); }
+  .member-remove-btn {
+    background: rgba(255,255,255,0.03);
+    color: var(--text-muted);
+    font-size: 12px;
+    padding: 4px 10px;
+  }
+  .member-remove-btn:hover {
+    background: rgba(231,76,60,0.1);
+    color: #e74c3c;
   }
 
   /* Create Group */
@@ -1028,6 +1104,18 @@
             <div class="restaurant-add-row">
               <input type="text" id="mgmtNewRestaurant" placeholder="Add restaurant...">
               <button onclick="mgmtAddRestaurant()">Add</button>
+            </div>
+          </div>
+          <!-- Members section (manager only) -->
+          <div class="settings-field">
+            <label>Members</label>
+            <div id="membersPendingSection" style="display:none;">
+              <div class="members-subsection-title">⏳ <span id="pendingCount">0</span></div>
+              <div id="membersPendingList" class="members-list"></div>
+            </div>
+            <div id="membersActiveSection">
+              <div class="members-subsection-title">✅ Members (<span id="activeCount">0</span>)</div>
+              <div id="membersActiveList" class="members-list"></div>
             </div>
           </div>
         </div>
@@ -1933,7 +2021,7 @@ async function loadVotingScreen() {
   switchTab('vote');
   listenToBallots();
   updateVotingStatus();
-  if (isManager()) loadPendingMembers();
+  if (isManager()) loadPendingBanner();
 
   // Check status every minute
   setInterval(updateVotingStatus, 60000);
@@ -2228,6 +2316,7 @@ async function openSettings() {
   document.getElementById('managerSettings').style.display = mgr ? 'block' : 'none';
   if (mgr) {
     document.getElementById('settingsCloseTime').value = groupSettings.votingCloseTime;
+    loadGroupMembers();
   }
   // Load group switcher
   const groups = await loadAllGroups();
@@ -2467,29 +2556,109 @@ async function renderHistoryTab() {
 }
 
 // ===== PENDING MEMBERS =====
-async function loadPendingMembers() {
+async function loadPendingBanner() {
   const bannerContainer = document.getElementById('pendingBanner');
   if (!bannerContainer) return;
 
-  const snapshot = await db.collection('groups').doc(currentGroup).collection('pendingMembers').get();
-  if (snapshot.empty) {
+  const pendingSnapshot = await db.collection('groups').doc(currentGroup).collection('pendingMembers').get();
+  
+  if (pendingSnapshot.empty) {
     bannerContainer.innerHTML = '';
     return;
   }
 
-  let html = '<div class="pending-banner"><div class="pending-banner-title">⏳ ' + snapshot.size + ' Pending Member Request' + (snapshot.size !== 1 ? 's' : '') + '</div>';
-  snapshot.forEach(doc => {
-    const data = doc.data();
-    html += `<div class="pending-member-row">
-      <span class="pending-member-name">${escapeHtml(data.displayName || data.email)}</span>
-      <div class="pending-member-actions">
-        <button class="pending-approve-btn" onclick="approveMember('${escapeHtml(doc.id)}')">Approve</button>
-        <button class="pending-deny-btn" onclick="denyMember('${escapeHtml(doc.id)}')">Deny</button>
+  const count = pendingSnapshot.size;
+  const plural = count !== 1 ? 's' : '';
+  bannerContainer.innerHTML = `
+    <div class="pending-notification-banner" onclick="openSettings()">
+      <div class="pending-notification-text">
+        ⏳ <span class="pending-notification-count">${count}</span> pending member request${plural} — Tap to manage
       </div>
-    </div>`;
+    </div>
+  `;
+}
+
+async function loadGroupMembers() {
+  // Fetch group doc for managers list
+  const groupDoc = await db.collection('groups').doc(currentGroup).get();
+  if (!groupDoc.exists) return;
+  const groupData = groupDoc.data();
+  const managers = groupData.managers || [];
+
+  // Fetch pending members
+  const pendingSnapshot = await db.collection('groups').doc(currentGroup).collection('pendingMembers').get();
+  const pendingList = document.getElementById('membersPendingList');
+  const pendingSection = document.getElementById('membersPendingSection');
+  const pendingCount = document.getElementById('pendingCount');
+  
+  if (pendingSnapshot.empty) {
+    pendingSection.style.display = 'none';
+  } else {
+    pendingSection.style.display = 'block';
+    pendingCount.textContent = `Pending (${pendingSnapshot.size})`;
+    let pendingHtml = '';
+    pendingSnapshot.forEach(doc => {
+      const data = doc.data();
+      pendingHtml += `
+        <div class="member-card">
+          <div class="member-info">
+            <div class="member-name">${escapeHtml(data.displayName || data.email)}</div>
+            <div class="member-email">${escapeHtml(data.email)}</div>
+          </div>
+          <div class="member-actions">
+            <button class="member-approve-btn" onclick="approveMember('${escapeHtml(doc.id)}')">Approve</button>
+            <button class="member-deny-btn" onclick="denyMember('${escapeHtml(doc.id)}')">Deny</button>
+          </div>
+        </div>
+      `;
+    });
+    pendingList.innerHTML = pendingHtml;
+  }
+
+  // Fetch active members
+  const membersSnapshot = await db.collection('groups').doc(currentGroup).collection('members').get();
+  const membersList = document.getElementById('membersActiveList');
+  const activeCount = document.getElementById('activeCount');
+  
+  activeCount.textContent = membersSnapshot.size;
+  
+  // Separate and sort members
+  const membersData = [];
+  membersSnapshot.forEach(doc => {
+    const data = doc.data();
+    membersData.push({
+      id: doc.id,
+      email: data.email,
+      displayName: data.displayName || data.email,
+      isManager: managers.includes(data.email)
+    });
   });
-  html += '</div>';
-  bannerContainer.innerHTML = html;
+  
+  // Sort: managers first, then alphabetically
+  membersData.sort((a, b) => {
+    if (a.isManager && !b.isManager) return -1;
+    if (!a.isManager && b.isManager) return 1;
+    return a.displayName.localeCompare(b.displayName);
+  });
+  
+  let membersHtml = '';
+  membersData.forEach(member => {
+    membersHtml += `
+      <div class="member-card">
+        <div class="member-info">
+          <div class="member-name">
+            ${escapeHtml(member.displayName)}
+            ${member.isManager ? '<span class="member-badge">⭐ Manager</span>' : ''}
+          </div>
+          <div class="member-email">${escapeHtml(member.email)}</div>
+        </div>
+        <div class="member-actions">
+          ${!member.isManager ? `<button class="member-remove-btn" onclick="removeMember('${escapeHtml(member.id)}', '${escapeHtml(member.displayName)}')">Remove</button>` : ''}
+        </div>
+      </div>
+    `;
+  });
+  membersList.innerHTML = membersHtml;
 }
 
 async function approveMember(userId) {
@@ -2507,7 +2676,8 @@ async function approveMember(userId) {
   await db.collection('users').doc(userId).set({ selectedGroup: currentGroup }, { merge: true });
 
   showToast(`Approved ${data.displayName || data.email}! ✅`);
-  loadPendingMembers();
+  loadGroupMembers();
+  loadPendingBanner();
 }
 
 async function denyMember(userId) {
@@ -2517,7 +2687,26 @@ async function denyMember(userId) {
   const name = pendingDoc.data().displayName || pendingDoc.data().email;
   await pendingRef.delete();
   showToast(`Denied ${name}`);
-  loadPendingMembers();
+  loadGroupMembers();
+  loadPendingBanner();
+}
+
+async function removeMember(userId, displayName) {
+  const groupDoc = await db.collection('groups').doc(currentGroup).get();
+  const groupName = groupDoc.exists ? (groupDoc.data().name || 'this group') : 'this group';
+  
+  if (!confirm(`Remove ${displayName} from ${groupName}? They'll need to request to join again.`)) {
+    return;
+  }
+  
+  try {
+    await db.collection('groups').doc(currentGroup).collection('members').doc(userId).delete();
+    showToast(`Removed ${displayName}`);
+    loadGroupMembers();
+  } catch (error) {
+    console.error('Error removing member:', error);
+    showToast('Failed to remove member');
+  }
 }
 
 // ===== FUZZY DROPDOWN =====

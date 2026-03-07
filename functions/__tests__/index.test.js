@@ -200,16 +200,10 @@ const mockMessaging = {
     failureCount: 0,
   }),
 };
-const mockSgMail = {
-  setApiKey: jest.fn(),
-  send: jest.fn().mockResolvedValue([{ statusCode: 202 }]),
-};
 
 // Mock secret values
 const mockSecrets = {
-  SENDGRID_API_KEY: 'test-sendgrid-key',
   REVENUECAT_WEBHOOK_SECRET: 'test-revenuecat-secret',
-  APPROVE_SECRET: 'test-approve-secret',
 };
 
 // Mock firebase-admin modules
@@ -224,9 +218,6 @@ jest.mock('firebase-admin/firestore', () => ({
 jest.mock('firebase-admin/messaging', () => ({
   getMessaging: jest.fn(() => mockMessaging),
 }));
-
-// Mock @sendgrid/mail
-jest.mock('@sendgrid/mail', () => mockSgMail);
 
 // Mock firebase-functions modules
 jest.mock('firebase-functions/params', () => ({
@@ -261,8 +252,6 @@ describe('Cloud Functions Test Suite', () => {
   beforeEach(() => {
     mockDb.reset();
     mockMessaging.sendEachForMulticast.mockClear();
-    mockSgMail.setApiKey.mockClear();
-    mockSgMail.send.mockClear();
     jest.clearAllMocks();
     
     // Reset Date mocking
@@ -486,219 +475,10 @@ describe('Cloud Functions Test Suite', () => {
     });
   });
 
-  // ===== makeToken TESTS =====
-
-  describe('makeToken', () => {
-    test('produces consistent HMAC tokens', () => {
-      const { makeToken } = functions;
-      
-      const token1 = makeToken('approve', 'group1', 'user1');
-      const token2 = makeToken('approve', 'group1', 'user1');
-
-      expect(token1).toBe(token2);
-      expect(token1).toHaveLength(16);
-      expect(token1).toMatch(/^[a-f0-9]{16}$/);
-    });
-
-    test('produces different tokens for different parameters', () => {
-      const { makeToken } = functions;
-      
-      const token1 = makeToken('approve', 'group1', 'user1');
-      const token2 = makeToken('approve', 'group2', 'user1');
-      const token3 = makeToken('deny', 'group1', 'user1');
-
-      expect(token1).not.toBe(token2);
-      expect(token1).not.toBe(token3);
-    });
-
-    test('changing any parameter changes the token', () => {
-      const { makeToken } = functions;
-      
-      const baseToken = makeToken('approve', 'group1', 'user1');
-      const diffAction = makeToken('deny', 'group1', 'user1');
-      const diffGroup = makeToken('approve', 'group2', 'user1');
-      const diffUser = makeToken('approve', 'group1', 'user2');
-
-      expect(baseToken).not.toBe(diffAction);
-      expect(baseToken).not.toBe(diffGroup);
-      expect(baseToken).not.toBe(diffUser);
-    });
-  });
-
-  // ===== approveMember TESTS =====
-
-  describe('approveMember', () => {
-    let mockReq, mockRes;
-
-    beforeEach(() => {
-      mockReq = {
-        query: {},
-      };
-      mockRes = {
-        status: jest.fn().mockReturnThis(),
-        send: jest.fn(),
-      };
-    });
-
-    test('returns 400 for missing parameters', async () => {
-      mockReq.query = { g: 'group1', u: 'user1' }; // Missing token
-
-      await functions.approveMember(mockReq, mockRes);
-
-      expect(mockRes.status).toHaveBeenCalledWith(400);
-      expect(mockRes.send).toHaveBeenCalledWith(expect.stringContaining('Missing parameters'));
-    });
-
-    test('returns 403 for invalid token', async () => {
-      mockReq.query = {
-        g: 'group1',
-        u: 'user1',
-        t: 'invalid-token',
-      };
-
-      await functions.approveMember(mockReq, mockRes);
-
-      expect(mockRes.status).toHaveBeenCalledWith(403);
-      expect(mockRes.send).toHaveBeenCalledWith(expect.stringContaining('Invalid or expired link'));
-    });
-
-    test('returns 404 for group not found', async () => {
-      const { makeToken } = functions;
-      const validToken = makeToken('approve', 'group1', 'user1');
-
-      mockReq.query = {
-        g: 'group1',
-        u: 'user1',
-        t: validToken,
-      };
-
-      // Don't set up group in mock DB
-
-      await functions.approveMember(mockReq, mockRes);
-
-      expect(mockRes.status).toHaveBeenCalledWith(404);
-      expect(mockRes.send).toHaveBeenCalledWith(expect.stringContaining('Group not found'));
-    });
-
-    test('shows "Already Processed" when pending member not found', async () => {
-      const { makeToken } = functions;
-      const validToken = makeToken('approve', 'group1', 'user1');
-
-      mockReq.query = {
-        g: 'group1',
-        u: 'user1',
-        t: validToken,
-      };
-
-      mockDb.setDocument('groups/group1', { name: 'Test Group' });
-      // Don't set up pending member
-
-      await functions.approveMember(mockReq, mockRes);
-
-      expect(mockRes.send).toHaveBeenCalledWith(expect.stringContaining('Already Processed'));
-    });
-
-    test('deny action deletes pending member and shows denied page', async () => {
-      const { makeToken } = functions;
-      const validToken = makeToken('deny', 'group1', 'user1');
-
-      mockReq.query = {
-        g: 'group1',
-        u: 'user1',
-        t: validToken,
-        action: 'deny',
-      };
-
-      mockDb.setDocument('groups/group1', { name: 'Test Group' });
-      mockDb.setDocument('groups/group1/pendingMembers/user1', {
-        email: 'test@example.com',
-        displayName: 'Test User',
-      });
-
-      await functions.approveMember(mockReq, mockRes);
-
-      expect(mockDb.getDeletes()).toContain('groups/group1/pendingMembers/user1');
-      expect(mockRes.send).toHaveBeenCalledWith(expect.stringContaining('Request Denied'));
-      expect(mockRes.send).toHaveBeenCalledWith(expect.stringContaining('❌'));
-    });
-
-    test('approve action moves member and sets selectedGroup', async () => {
-      const { makeToken } = functions;
-      const validToken = makeToken('approve', 'group1', 'user1');
-
-      mockReq.query = {
-        g: 'group1',
-        u: 'user1',
-        t: validToken,
-      };
-
-      mockDb.setDocument('groups/group1', { name: 'Test Group' });
-      mockDb.setDocument('groups/group1/pendingMembers/user1', {
-        email: 'test@example.com',
-        displayName: 'Test User',
-      });
-
-      await functions.approveMember(mockReq, mockRes);
-
-      // Check that member was added
-      const memberWrite = mockDb.getWrites().find(w => w.path === 'groups/group1/members/user1');
-      expect(memberWrite).toBeDefined();
-      expect(memberWrite.data.email).toBe('test@example.com');
-      expect(memberWrite.data.displayName).toBe('Test User');
-
-      // Check that pending member was deleted
-      expect(mockDb.getDeletes()).toContain('groups/group1/pendingMembers/user1');
-
-      // Check that selectedGroup was set
-      const userWrite = mockDb.getWrites().find(w => w.path === 'users/user1');
-      expect(userWrite).toBeDefined();
-      expect(userWrite.data.selectedGroup).toBe('group1');
-
-      // Check response
-      expect(mockRes.send).toHaveBeenCalledWith(expect.stringContaining('Member Approved'));
-      expect(mockRes.send).toHaveBeenCalledWith(expect.stringContaining('✅'));
-    });
-
-    test('handles selectedGroup write failure gracefully', async () => {
-      const { makeToken } = functions;
-      const validToken = makeToken('approve', 'group1', 'user1');
-
-      mockReq.query = {
-        g: 'group1',
-        u: 'user1',
-        t: validToken,
-      };
-
-      mockDb.setDocument('groups/group1', { name: 'Test Group' });
-      mockDb.setDocument('groups/group1/pendingMembers/user1', {
-        email: 'test@example.com',
-        displayName: 'Test User',
-      });
-
-      // Mock a failure when setting selectedGroup
-      const originalSet = MockDocumentReference.prototype.set;
-      MockDocumentReference.prototype.set = jest.fn(async function(data, options) {
-        if (this.path === 'users/user1') {
-          throw new Error('Firestore error');
-        }
-        return originalSet.call(this, data, options);
-      });
-
-      await functions.approveMember(mockReq, mockRes);
-
-      // Should still show success page
-      expect(mockRes.send).toHaveBeenCalledWith(expect.stringContaining('Member Approved'));
-      expect(console.warn).toHaveBeenCalledWith('Could not set selectedGroup:', 'Firestore error');
-
-      // Restore
-      MockDocumentReference.prototype.set = originalSet;
-    });
-  });
-
   // ===== onPendingMemberCreated TESTS =====
 
   describe('onPendingMemberCreated', () => {
-    test('sends email to all managers via SendGrid', async () => {
+    test('sends push notifications to all managers with FCM tokens', async () => {
       const event = {
         params: { groupId: 'group1', userId: 'user1' },
         data: {
@@ -714,26 +494,39 @@ describe('Cloud Functions Test Suite', () => {
         managers: ['manager1@example.com', 'manager2@example.com'],
       });
 
+      // Mock user docs with FCM tokens
+      mockDb.setDocument('users/manager1-uid', {
+        email: 'manager1@example.com',
+        fcmToken: 'token1',
+      });
+      mockDb.setDocument('users/manager2-uid', {
+        email: 'manager2@example.com',
+        fcmToken: 'token2',
+      });
+
+      mockMessaging.sendEachForMulticast.mockResolvedValue({
+        successCount: 2,
+        failureCount: 0,
+      });
+
       await functions.onPendingMemberCreated(event);
 
-      expect(mockSgMail.setApiKey).toHaveBeenCalledWith(mockSecrets.SENDGRID_API_KEY);
-      expect(mockSgMail.send).toHaveBeenCalledTimes(2);
-      
-      const sentMessages = mockSgMail.send.mock.calls.map(call => call[0]);
-      expect(sentMessages).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            to: 'manager1@example.com',
-            from: 'johntfosterjr@gmail.com',
-            subject: expect.stringContaining('Test Group'),
-          }),
-          expect.objectContaining({
-            to: 'manager2@example.com',
-            from: 'johntfosterjr@gmail.com',
-            subject: expect.stringContaining('Test Group'),
-          }),
-        ])
-      );
+      expect(mockMessaging.sendEachForMulticast).toHaveBeenCalledWith({
+        tokens: expect.arrayContaining(['token1', 'token2']),
+        notification: {
+          title: 'New Member Request',
+          body: 'New User wants to join Test Group',
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: 'default',
+              badge: 1,
+            },
+          },
+        },
+        data: {},
+      });
     });
 
     test('handles group not found', async () => {
@@ -750,7 +543,7 @@ describe('Cloud Functions Test Suite', () => {
       await functions.onPendingMemberCreated(event);
 
       expect(console.error).toHaveBeenCalledWith('Group not found:', 'nonexistent');
-      expect(mockSgMail.send).not.toHaveBeenCalled();
+      expect(mockMessaging.sendEachForMulticast).not.toHaveBeenCalled();
     });
 
     test('handles no managers', async () => {
@@ -772,10 +565,10 @@ describe('Cloud Functions Test Suite', () => {
       await functions.onPendingMemberCreated(event);
 
       expect(console.log).toHaveBeenCalledWith('No managers to notify for group:', 'group1');
-      expect(mockSgMail.send).not.toHaveBeenCalled();
+      expect(mockMessaging.sendEachForMulticast).not.toHaveBeenCalled();
     });
 
-    test('email contains correct approve/deny URLs with valid tokens', async () => {
+    test('handles managers with no FCM tokens', async () => {
       const event = {
         params: { groupId: 'group1', userId: 'user1' },
         data: {
@@ -791,41 +584,53 @@ describe('Cloud Functions Test Suite', () => {
         managers: ['manager@example.com'],
       });
 
+      // Manager has no FCM token
+      mockDb.setDocument('users/manager-uid', {
+        email: 'manager@example.com',
+      });
+
       await functions.onPendingMemberCreated(event);
 
-      const sentMessage = mockSgMail.send.mock.calls[0][0];
-      const html = sentMessage.html;
-
-      // Check for approve URL with token
-      expect(html).toMatch(/approveMember\?g=group1&u=user1&t=[a-f0-9]{16}&action=approve/);
-      
-      // Check for deny URL with token
-      expect(html).toMatch(/approveMember\?g=group1&u=user1&t=[a-f0-9]{16}&action=deny/);
+      expect(console.log).toHaveBeenCalledWith('No FCM tokens found for managers');
+      expect(mockMessaging.sendEachForMulticast).not.toHaveBeenCalled();
     });
 
-    test('handles SendGrid error gracefully', async () => {
+    test('sends notification with correct title and body', async () => {
       const event = {
         params: { groupId: 'group1', userId: 'user1' },
         data: {
           data: () => ({
-            email: 'test@example.com',
-            displayName: 'Test User',
+            email: 'jane@example.com',
+            displayName: 'Jane Doe',
           }),
         },
       };
 
       mockDb.setDocument('groups/group1', {
-        name: 'Test Group',
+        name: 'Marketing Team',
         managers: ['manager@example.com'],
       });
 
-      mockSgMail.send.mockRejectedValue({
-        response: { body: 'SendGrid error' },
+      mockDb.setDocument('users/manager-uid', {
+        email: 'manager@example.com',
+        fcmToken: 'test-token',
+      });
+
+      mockMessaging.sendEachForMulticast.mockResolvedValue({
+        successCount: 1,
+        failureCount: 0,
       });
 
       await functions.onPendingMemberCreated(event);
 
-      expect(console.error).toHaveBeenCalledWith('SendGrid error:', 'SendGrid error');
+      expect(mockMessaging.sendEachForMulticast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notification: {
+            title: 'New Member Request',
+            body: 'Jane Doe wants to join Marketing Team',
+          },
+        })
+      );
     });
   });
 
