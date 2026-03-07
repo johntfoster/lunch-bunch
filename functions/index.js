@@ -216,6 +216,16 @@ function getCSTDateString() {
 }
 
 /**
+ * Get the current day of week in America/Chicago timezone (1=Monday, 7=Sunday).
+ */
+function getCSTDayOfWeek() {
+  const cstDate = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Chicago" }));
+  const jsDay = cstDate.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+  // Convert to ISO: 1=Monday, 7=Sunday
+  return jsDay === 0 ? 7 : jsDay;
+}
+
+/**
  * Get current time as "HH:MM" in America/Chicago timezone.
  */
 function getCSTTimeString() {
@@ -241,8 +251,9 @@ function subtractMinutes(timeStr, minutes) {
 /**
  * Get all users in a group that have a given notification preference enabled.
  * Returns array of { uid, fcmToken }.
+ * @param {number} currentDay - Current day of week (1=Monday, 7=Sunday). If provided, filters by notifDays.
  */
-async function getGroupNotifRecipients(groupId, prefKey) {
+async function getGroupNotifRecipients(groupId, prefKey, currentDay = null) {
   // Get all member IDs for the group
   const membersSnap = await db
     .collection("groups")
@@ -269,6 +280,13 @@ async function getGroupNotifRecipients(groupId, prefKey) {
     if (!prefs[prefKey]) return;
     // Confirm this user's selectedGroup is actually this group
     if (data.selectedGroup !== groupId) return;
+    
+    // Check if today is in user's active notification days
+    if (currentDay !== null) {
+      const notifDays = data.notifDays || [1, 2, 3, 4, 5]; // Default to Mon-Fri
+      if (!notifDays.includes(currentDay)) return;
+    }
+    
     recipients.push({ uid, fcmToken: token });
   });
 
@@ -327,8 +345,9 @@ exports.sendVotingReminders = onSchedule(
   async () => {
     const currentTime = getCSTTimeString(); // e.g. "10:50"
     const today = getCSTDateString();
+    const currentDay = getCSTDayOfWeek(); // 1=Monday through 7=Sunday
 
-    console.log(`[Reminders] Checking at ${currentTime} (CST) for date ${today}`);
+    console.log(`[Reminders] Checking at ${currentTime} (CST) for date ${today}, day ${currentDay}`);
 
     // Get all groups
     const groupsSnap = await db.collection("groups").get();
@@ -355,10 +374,10 @@ exports.sendVotingReminders = onSchedule(
         return;
       }
 
-      // Get recipients who want reminder notifications
-      const recipients = await getGroupNotifRecipients(groupId, "reminder");
+      // Get recipients who want reminder notifications (filtered by active days)
+      const recipients = await getGroupNotifRecipients(groupId, "reminder", currentDay);
       if (recipients.length === 0) {
-        console.log(`[Reminders] No opted-in users for group ${groupId}`);
+        console.log(`[Reminders] No opted-in users for group ${groupId} on day ${currentDay}`);
         // Still mark as sent to avoid repeated checks
         await logRef.set({ reminderSentAt: new Date(), reminderCloseTime: votingCloseTime }, { merge: true });
         return;
@@ -401,8 +420,9 @@ exports.sendWinnerAnnouncements = onSchedule(
   async () => {
     const currentTime = getCSTTimeString();
     const today = getCSTDateString();
+    const currentDay = getCSTDayOfWeek(); // 1=Monday through 7=Sunday
 
-    console.log(`[Winners] Checking at ${currentTime} (CST) for date ${today}`);
+    console.log(`[Winners] Checking at ${currentTime} (CST) for date ${today}, day ${currentDay}`);
 
     const groupsSnap = await db.collection("groups").get();
     const groupPromises = groupsSnap.docs.map(async (groupDoc) => {
@@ -461,10 +481,10 @@ exports.sendWinnerAnnouncements = onSchedule(
       const winnerVotes = tally[winner];
       const totalVotes = Object.values(tally).reduce((s, v) => s + v, 0);
 
-      // Get recipients who want winner notifications
-      const recipients = await getGroupNotifRecipients(groupId, "winner");
+      // Get recipients who want winner notifications (filtered by active days)
+      const recipients = await getGroupNotifRecipients(groupId, "winner", currentDay);
       if (recipients.length === 0) {
-        console.log(`[Winners] No opted-in users for group ${groupId}`);
+        console.log(`[Winners] No opted-in users for group ${groupId} on day ${currentDay}`);
         return;
       }
 

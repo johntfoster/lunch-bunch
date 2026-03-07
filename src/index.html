@@ -396,6 +396,27 @@
     padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06);
   }
   .notif-toggle-row:last-child { border-bottom: none; }
+  
+  /* Day picker */
+  .notif-days-label {
+    font-size: 13px; color: var(--text); margin: 12px 0 8px;
+  }
+  .notif-days-row {
+    display: flex; gap: 8px; justify-content: space-between;
+    padding: 8px 0 12px; border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .day-btn {
+    flex: 1; padding: 10px 4px; border-radius: 8px;
+    border: 1px solid #444; background: transparent;
+    color: var(--text-muted); font-family: 'Oswald', sans-serif;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: all 0.2s; text-align: center;
+    min-width: 36px;
+  }
+  .day-btn:hover { border-color: var(--primary); }
+  .day-btn.active {
+    background: var(--primary); color: #fff; border-color: var(--primary);
+  }
   .notif-toggle-label {
     font-size: 14px; color: var(--text); line-height: 1.3;
   }
@@ -1041,6 +1062,16 @@
               <span class="toggle-slider"></span>
             </label>
           </div>
+          <div class="notif-days-label">Notification days</div>
+          <div class="notif-days-row">
+            <button class="day-btn" data-day="1" onclick="toggleNotifDay(1)">M</button>
+            <button class="day-btn" data-day="2" onclick="toggleNotifDay(2)">T</button>
+            <button class="day-btn" data-day="3" onclick="toggleNotifDay(3)">W</button>
+            <button class="day-btn" data-day="4" onclick="toggleNotifDay(4)">T</button>
+            <button class="day-btn" data-day="5" onclick="toggleNotifDay(5)">F</button>
+            <button class="day-btn" data-day="6" onclick="toggleNotifDay(6)">S</button>
+            <button class="day-btn" data-day="7" onclick="toggleNotifDay(7)">S</button>
+          </div>
           <div class="notif-status-msg" id="notifStatusMsg"></div>
         </div>
         <!-- Subscription info -->
@@ -1149,6 +1180,7 @@ let winCounts = {}; // restaurant name -> number of historical wins
 // ===== PUSH NOTIFICATION STATE =====
 let fcmToken = null;
 let notifPrefs = { reminder: false, winner: false };
+let notifDays = [1, 2, 3, 4, 5]; // Mon-Fri default (1=Monday, 7=Sunday)
 
 // ===== PUSH NOTIFICATIONS =====
 
@@ -1209,6 +1241,7 @@ async function loadNotifPrefs() {
     const userDoc = await db.collection('users').doc(currentUser.uid).get();
     const data = userDoc.data() || {};
     notifPrefs = { reminder: false, winner: false, ...(data.notificationPrefs || {}) };
+    notifDays = data.notifDays || [1, 2, 3, 4, 5]; // Default to Mon-Fri
   } catch (e) {
     console.error('[Push] Failed to load notif prefs:', e);
   }
@@ -1220,6 +1253,7 @@ async function saveNotifPrefs() {
   try {
     await db.collection('users').doc(currentUser.uid).set({
       notificationPrefs: notifPrefs,
+      notifDays: notifDays,
       selectedGroup: currentGroup
     }, { merge: true });
   } catch (e) {
@@ -1305,12 +1339,47 @@ function updateNotifToggles() {
   if (reminderEl) reminderEl.checked = notifPrefs.reminder || false;
   if (winnerEl) winnerEl.checked = notifPrefs.winner || false;
 
+  // Update day button states
+  document.querySelectorAll('.day-btn').forEach(btn => {
+    const day = parseInt(btn.dataset.day);
+    if (notifDays.includes(day)) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
   // Dim notification section on non-native platforms (web browser)
   const section = document.getElementById('notifSettingsSection');
   if (section) {
     const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
     section.style.opacity = isNative ? '1' : '0.5';
   }
+}
+
+// Toggle a notification day on/off
+async function toggleNotifDay(day) {
+  const index = notifDays.indexOf(day);
+  if (index === -1) {
+    // Add day
+    notifDays.push(day);
+    notifDays.sort((a, b) => a - b); // Keep sorted
+  } else {
+    // Remove day (but keep at least one day selected)
+    if (notifDays.length === 1) {
+      showToast('At least one day must be selected');
+      return;
+    }
+    notifDays.splice(index, 1);
+  }
+
+  // Update UI
+  updateNotifToggles();
+
+  // Save to Firestore
+  await saveNotifPrefs();
+  setNotifStatusMsg('Saved! ✓');
+  setTimeout(() => setNotifStatusMsg(''), 2000);
 }
 
 // ===== REVENUECAT =====
