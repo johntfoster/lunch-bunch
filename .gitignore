@@ -3,3 +3,4 @@ android/
 .firebase/
 *.log
 app-icon-options*
+functions/coverage/
