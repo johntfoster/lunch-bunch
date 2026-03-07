@@ -1114,29 +1114,10 @@
     </div>
     <div class="create-group-error" id="createGroupError"></div>
     <button class="create-group-btn" id="createGroupBtn" onclick="handleCreateGroup()">Subscribe & Create</button>
-    <button class="create-group-cancel" onclick="closeCreateGroup()">Cancel</button>
-  </div>
-</div>
-
-<!-- Paywall Overlay -->
-<div class="paywall-overlay" id="paywallOverlay" onclick="closePaywallOverlay()">
-  <div class="paywall-modal" onclick="event.stopPropagation()">
-    <div class="paywall-title">Subscribe to Continue</div>
-    <div class="paywall-subtitle">Create &amp; manage unlimited lunch voting groups</div>
-    <div class="paywall-group-name">Creating: "<span id="paywallGroupName"></span>"</div>
-
-    <div class="paywall-card" data-product="lunch_bunch_manager" onclick="selectPaywallPlan()">
-      <div class="paywall-card-name">Lunch Bunch Manager</div>
-      <div class="paywall-card-price">$9.99</div>
-      <div class="paywall-card-period">per year</div>
-      <div class="paywall-card-desc">Create & manage unlimited lunch voting groups</div>
-      <button class="paywall-card-btn">Select</button>
-    </div>
-
-    <div class="paywall-footer">
+    <div style="text-align:center;margin-top:8px;">
       <button class="paywall-restore" onclick="restorePurchases()">Restore Purchases</button>
-      <button class="paywall-cancel" onclick="closePaywallOverlay()">Cancel</button>
     </div>
+    <button class="create-group-cancel" onclick="closeCreateGroup()">Cancel</button>
   </div>
 </div>
 
@@ -1458,6 +1439,31 @@ async function restorePurchases() {
   }
 }
 
+async function resubscribeNow() {
+  if (!window.Capacitor || !window.Capacitor.isNativePlatform()) {
+    showToast('Subscriptions are only available in the iOS app', 3000);
+    return;
+  }
+  if (!paywallPackages) await loadPaywallPackages();
+  if (!paywallPackages) {
+    showToast('Unable to load subscription. Try again.', 3000);
+    return;
+  }
+  const pkg = paywallPackages.find(p =>
+    p.product.identifier === 'lunch_bunch_manager' ||
+    p.product.identifier === 'lunch_bunch_manager_1'
+  );
+  if (!pkg) {
+    showToast('Subscription package not found.', 3000);
+    return;
+  }
+  const customerInfo = await purchasePackage(pkg);
+  if (customerInfo) {
+    showToast('Subscription restored! Reloading...', 2000);
+    setTimeout(() => location.reload(), 2000);
+  }
+}
+
 function openPaywallOverlay(groupName) {
   document.getElementById('paywallGroupName').textContent = groupName;
   document.getElementById('paywallOverlay').classList.add('show');
@@ -1662,6 +1668,7 @@ auth.onAuthStateChanged(async user => {
     // Initialize push notifications and load prefs
     await loadNotifPrefs();
     initPushNotifications(); // fire-and-forget (async token fetch)
+    loadPaywallPackages(); // preload subscription packages
 
     // Handle ?approve= and ?deny= query params
     const params = new URLSearchParams(window.location.search);
@@ -2048,7 +2055,7 @@ function renderVoteTab() {
       const deleteDate = groupDeleteAt ? new Date(groupDeleteAt.toMillis()).toLocaleDateString() : '30 days';
       bannerHtml += `<div style="font-family:'Oswald',sans-serif;font-size:18px;color:var(--danger);margin-bottom:12px;">⚠️ Group Inactive</div>`;
       bannerHtml += `<div style="font-size:14px;color:var(--text);line-height:1.6;margin-bottom:16px;">Your subscription expired on ${expiredDate}. Your groups will be deleted on ${deleteDate}. Resubscribe to keep them.</div>`;
-      bannerHtml += `<button onclick="openPaywallOverlay('${document.getElementById('groupNameDisplay').textContent}')" style="padding:12px 24px;border-radius:8px;border:none;background:var(--primary);color:#fff;font-family:'Oswald',sans-serif;font-size:15px;font-weight:600;cursor:pointer;">Resubscribe Now</button>`;
+      bannerHtml += `<button onclick="resubscribeNow()" style="padding:12px 24px;border-radius:8px;border:none;background:var(--primary);color:#fff;font-family:'Oswald',sans-serif;font-size:15px;font-weight:600;cursor:pointer;">Resubscribe Now</button>`;
     } else {
       bannerHtml += `<div style="font-family:'Oswald',sans-serif;font-size:18px;color:var(--danger);margin-bottom:8px;">⚠️ Group Inactive</div>`;
       bannerHtml += `<div style="font-size:14px;color:var(--text-muted);line-height:1.6;">This group is inactive — the manager's subscription has expired.</div>`;
@@ -2642,9 +2649,52 @@ async function handleCreateGroup() {
     return;
   }
 
-  // Close create group modal and show paywall
+  // Check platform
+  const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+  if (!isNative) {
+    errEl.textContent = 'Subscriptions are only available in the iOS app.';
+    return;
+  }
+
+  // Check if already subscribed
+  const sub = await checkSubscription();
+  if (sub.active) {
+    closeCreateGroup();
+    await createGroupAfterPurchase(null);
+    return;
+  }
+
+  // Load packages and trigger purchase directly
+  btn.disabled = true;
+  btn.textContent = 'Loading...';
+  if (!paywallPackages) {
+    await loadPaywallPackages();
+  }
+  if (!paywallPackages) {
+    errEl.textContent = 'Unable to load subscription. Try again.';
+    btn.disabled = false;
+    btn.textContent = 'Subscribe & Create';
+    return;
+  }
+
+  const pkg = paywallPackages.find(p =>
+    p.product.identifier === 'lunch_bunch_manager' ||
+    p.product.identifier === 'lunch_bunch_manager_1'
+  );
+  if (!pkg) {
+    errEl.textContent = 'Subscription package not found. Try again.';
+    btn.disabled = false;
+    btn.textContent = 'Subscribe & Create';
+    return;
+  }
+
+  const customerInfo = await purchasePackage(pkg);
+  btn.disabled = false;
+  btn.textContent = 'Subscribe & Create';
+  if (!customerInfo) return; // cancelled or failed
+
   closeCreateGroup();
-  openPaywallOverlay(name);
+  await createGroupAfterPurchase(customerInfo);
 }
 
 async function createGroupAfterPurchase(customerInfo) {
