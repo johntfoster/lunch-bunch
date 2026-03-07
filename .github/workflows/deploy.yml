@@ -4,7 +4,7 @@ on:
     branches: [main]
 
 jobs:
-  deploy:
+  deploy-hosting:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,5 +17,38 @@ jobs:
           channelId: live
           projectId: lunch-bunch-jf
 
-      # TODO: Add iOS build and deploy workflow
-      # TODO: Add Android build and deploy workflow
+  deploy-functions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check for functions changes
+        id: changes
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -q '^functions/'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Node.js
+        if: steps.changes.outputs.changed == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        if: steps.changes.outputs.changed == 'true'
+        run: cd functions && npm ci
+
+      - name: Authenticate to Google Cloud
+        if: steps.changes.outputs.changed == 'true'
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+
+      - name: Deploy Cloud Functions
+        if: steps.changes.outputs.changed == 'true'
+        run: npx firebase-tools deploy --only functions --project lunch-bunch-jf --force
