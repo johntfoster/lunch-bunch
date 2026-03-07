@@ -11,6 +11,11 @@
       "public": "src",
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "rewrites": [{ "source": "**", "destination": "/index.html" }]
+    },
+    {
+      "site": "lunch-bunch-marketing",
+      "public": "marketing",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
     }
   ],
   "firestore": {
