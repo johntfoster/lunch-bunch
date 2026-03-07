@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lunch Bunch — Daily Restaurant Voting for Teams</title>
+    <meta name="description" content="Lunch Bunch is a daily restaurant voting app for lunch groups. Teams vote on where to eat, winner announced at closing time. $9.99/year for group managers.">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="Lunch Bunch — Daily Restaurant Voting for Teams">
+    <meta property="og:description" content="Where should we eat? Let the group decide. Daily restaurant voting for teams, departments, and friend groups.">
+    <meta property="og:image" content="https://lunchbunch.app/app-icon-180.png">
+    <meta property="og:type" content="website">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="favicon.png">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --bg: #1a1a1a;
+            --orange: #bf5700;
+            --orange-hover: #d96200;
+            --card-bg: #252525;
+            --border: #333;
+            --text: #ffffff;
+            --text-muted: #aaa;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        h1, h2, h3, h4 {
+            font-family: 'Oswald', sans-serif;
+            font-weight: 600;
+            line-height: 1.2;
+        }
+        
+        section {
+            padding: 80px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: radial-gradient(ellipse at center, rgba(191, 87, 0, 0.1) 0%, transparent 70%);
+            padding: 60px 20px;
+        }
+        
+        .hero-icon {
+            width: 120px;
+            height: 120px;
+            border-radius: 24px;
+            margin-bottom: 32px;
+            box-shadow: 0 10px 40px rgba(191, 87, 0, 0.3);
+            animation: fadeInUp 0.8s ease-out;
+        }
+        
+        .hero h1 {
+            font-size: clamp(3rem, 8vw, 5rem);
+            margin-bottom: 16px;
+            letter-spacing: -0.02em;
+            animation: fadeInUp 0.8s ease-out 0.1s backwards;
+        }
+        
+        .hero .tagline {
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            animation: fadeInUp 0.8s ease-out 0.2s backwards;
+        }
+        
+        .hero .subtitle {
+            font-size: clamp(1rem, 2.5vw, 1.25rem);
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto 48px;
+            animation: fadeInUp 0.8s ease-out 0.3s backwards;
+        }
+        
+        .cta-group {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            align-items: center;
+            animation: fadeInUp 0.8s ease-out 0.4s backwards;
+        }
+        
+        .btn-primary {
+            background: var(--orange);
+            color: white;
+            padding: 16px 48px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.125rem;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            display: inline-block;
+        }
+        
+        .btn-primary:hover {
+            background: var(--orange-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(191, 87, 0, 0.4);
+        }
+        
+        .secondary-link {
+            color: var(--orange);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+        
+        .secondary-link:hover {
+            color: var(--orange-hover);
+        }
+        
+        /* Phone Mockup */
+        .phone-mockup {
+            margin-top: 60px;
+            perspective: 1000px;
+        }
+        
+        .phone {
+            width: 300px;
+            height: 600px;
+            background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+            border-radius: 40px;
+            border: 12px solid #333;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        .phone-screen {
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+        
+        .phone-screen .emoji {
+            font-size: 3rem;
+            margin-bottom: 12px;
+        }
+        
+        /* How It Works Section */
+        .section-title {
+            font-size: clamp(2rem, 5vw, 3rem);
+            text-align: center;
+            margin-bottom: 64px;
+        }
+        
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 32px;
+            margin-bottom: 40px;
+        }
+        
+        .step-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 40px 32px;
+            text-align: center;
+            transition: all 0.3s ease;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        
+        .step-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .step-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--orange);
+            box-shadow: 0 8px 24px rgba(191, 87, 0, 0.2);
+        }
+        
+        .step-icon {
+            font-size: 3.5rem;
+            margin-bottom: 24px;
+            display: block;
+        }
+        
+        .step-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 16px;
+            color: var(--orange);
+        }
+        
+        .step-card p {
+            color: var(--text-muted);
+            font-size: 1.05rem;
+        }
+        
+        /* Features Section */
+        .features {
+            background: linear-gradient(180deg, transparent 0%, rgba(191, 87, 0, 0.05) 50%, transparent 100%);
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+        }
+        
+        .feature-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 32px 24px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .feature-card:hover {
+            border-color: var(--orange);
+        }
+        
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 12px;
+            display: block;
+        }
+        
+        .feature-card h4 {
+            font-size: 1.25rem;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+        
+        .feature-card p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+        
+        /* Pricing Section */
+        .pricing {
+            text-align: center;
+        }
+        
+        .pricing-card {
+            background: var(--card-bg);
+            border: 2px solid var(--orange);
+            border-radius: 20px;
+            padding: 48px 32px;
+            max-width: 500px;
+            margin: 0 auto;
+            box-shadow: 0 8px 32px rgba(191, 87, 0, 0.2);
+        }
+        
+        .pricing-card h3 {
+            font-size: 2rem;
+            margin-bottom: 16px;
+        }
+        
+        .price {
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: var(--orange);
+            margin-bottom: 8px;
+            font-family: 'Oswald', sans-serif;
+        }
+        
+        .price-period {
+            color: var(--text-muted);
+            font-size: 1.125rem;
+            margin-bottom: 32px;
+        }
+        
+        .pricing-features {
+            list-style: none;
+            margin-bottom: 32px;
+            text-align: left;
+            max-width: 350px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .pricing-features li {
+            padding: 12px 0;
+            color: var(--text-muted);
+            font-size: 1.05rem;
+        }
+        
+        .pricing-features li::before {
+            content: "✓";
+            color: var(--orange);
+            font-weight: bold;
+            margin-right: 12px;
+            font-size: 1.25rem;
+        }
+        
+        /* Footer */
+        footer {
+            background: #0f0f0f;
+            padding: 48px 20px 32px;
+            text-align: center;
+            border-top: 1px solid var(--border);
+        }
+        
+        .footer-links {
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+        
+        .footer-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        .footer-links a:hover {
+            color: var(--orange);
+        }
+        
+        .copyright {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+        
+        .made-in {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+        
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0px) rotateY(0deg);
+            }
+            50% {
+                transform: translateY(-10px) rotateY(5deg);
+            }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            section {
+                padding: 60px 20px;
+            }
+            
+            .hero {
+                min-height: auto;
+                padding: 80px 20px;
+            }
+            
+            .hero-icon {
+                width: 100px;
+                height: 100px;
+            }
+            
+            .phone {
+                width: 250px;
+                height: 500px;
+            }
+            
+            .steps, .features-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .cta-group {
+                width: 100%;
+            }
+            
+            .btn-primary {
+                width: 100%;
+                max-width: 320px;
+            }
+        }
+        
+        @media (min-width: 769px) {
+            .cta-group {
+                flex-direction: row;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero">
+        <img src="app-icon-180.png" alt="Lunch Bunch App Icon" class="hero-icon">
+        <h1>Lunch Bunch</h1>
+        <p class="tagline">Where should we eat? Let the group decide.</p>
+        <p class="subtitle">Daily restaurant voting for teams, departments, and friend groups</p>
+        
+        <div class="cta-group">
+            <a href="#" class="btn-primary">Download on the App Store</a>
+            <a href="https://vote.lunchbunch.app" class="secondary-link">Or use the web app →</a>
+        </div>
+        
+        <div class="phone-mockup">
+            <div class="phone">
+                <div class="phone-screen">
+                    <div class="emoji">🍔🗳️🏆</div>
+                    <p>Vote daily.<br>Winner announced.<br>Never wonder again.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- How It Works Section -->
+    <section id="how-it-works">
+        <h2 class="section-title">How It Works</h2>
+        <div class="steps">
+            <div class="step-card">
+                <span class="step-icon">🍔</span>
+                <h3>Create a Group</h3>
+                <p>Start a lunch group and add your favorite restaurants. $9.99/year.</p>
+            </div>
+            <div class="step-card">
+                <span class="step-icon">📩</span>
+                <h3>Invite Your Team</h3>
+                <p>Share with coworkers, friends, or anyone you eat with.</p>
+            </div>
+            <div class="step-card">
+                <span class="step-icon">🗳️</span>
+                <h3>Vote Daily</h3>
+                <p>Everyone picks their top choice. Winner announced at closing time.</p>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Features Section -->
+    <section class="features">
+        <h2 class="section-title">Everything You Need</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <span class="feature-icon">⏰</span>
+                <h4>Custom Voting Schedule</h4>
+                <p>Set when voting closes each day</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">📊</span>
+                <h4>Live Results</h4>
+                <p>Watch votes come in real-time</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">🔔</span>
+                <h4>Smart Notifications</h4>
+                <p>Reminders before voting closes, winner announcements</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">📱</span>
+                <h4>Works Everywhere</h4>
+                <p>iOS app + web app, same experience</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">🏆</span>
+                <h4>History</h4>
+                <p>See past winners and discover new favorites</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">👥</span>
+                <h4>Group Management</h4>
+                <p>Approve members, manage restaurants</p>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Pricing Section -->
+    <section class="pricing">
+        <h2 class="section-title">One Plan. Simple.</h2>
+        <div class="pricing-card">
+            <div class="price">$9.99</div>
+            <div class="price-period">/year</div>
+            <ul class="pricing-features">
+                <li>Unlimited groups</li>
+                <li>Unlimited members vote free</li>
+                <li>Only the group manager pays</li>
+            </ul>
+            <a href="#" class="btn-primary">Get Started</a>
+        </div>
+    </section>
+    
+    <!-- Footer -->
+    <footer>
+        <div class="footer-links">
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms</a>
+            <a href="mailto:support@lunchbunch.app">Contact</a>
+        </div>
+        <p class="copyright">© 2026 Lunch Bunch</p>
+        <p class="made-in">Made in Austin, TX 🤘</p>
+    </footer>
+    
+    <!-- Scroll Animation Script -->
+    <script>
+        // Intersection Observer for scroll animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+        
+        // Observe all step cards and feature cards
+        document.querySelectorAll('.step-card, .feature-card').forEach(card => {
+            observer.observe(card);
+        });
+        
+        // Add stagger effect to cards
+        const stepCards = document.querySelectorAll('.step-card');
+        stepCards.forEach((card, index) => {
+            card.style.transitionDelay = `${index * 0.1}s`;
+        });
+        
+        const featureCards = document.querySelectorAll('.feature-card');
+        featureCards.forEach((card, index) => {
+            card.style.transitionDelay = `${index * 0.05}s`;
+        });
+    </script>
+</body>
+</html>
