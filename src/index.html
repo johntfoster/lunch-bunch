@@ -765,6 +765,71 @@
   }
   .settings-logout-btn:hover { background: rgba(231,76,60,0.15); }
 
+  /* Manage Members button in Settings */
+  .settings-manage-members-btn {
+    width: 100%; padding: 14px 16px; border-radius: 10px;
+    border: 1px solid var(--medium-gray); background: rgba(255,255,255,0.03);
+    color: var(--text); font-size: 15px; cursor: pointer;
+    font-family: 'Source Sans 3', sans-serif; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: space-between;
+    position: relative;
+  }
+  .settings-manage-members-btn:hover {
+    border-color: var(--primary); background: rgba(255,255,255,0.05);
+  }
+  .settings-manage-members-btn::after {
+    content: '→'; font-size: 18px; color: var(--text-muted);
+  }
+  .pending-badge {
+    background: var(--primary); color: #fff;
+    padding: 2px 10px; border-radius: 10px;
+    font-size: 12px; font-family: 'Oswald', sans-serif;
+    letter-spacing: 0.5px; margin-left: 8px;
+  }
+
+  /* Manage Members Modal */
+  .manage-members-overlay {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--near-black); z-index: 110;
+    justify-content: center; align-items: flex-start;
+  }
+  .manage-members-overlay.show { display: flex; }
+  .manage-members-modal {
+    width: 100%; height: 100vh; height: 100dvh;
+    background: var(--near-black); color: var(--text);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .manage-members-header {
+    padding: 16px;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
+    background: linear-gradient(180deg, rgba(44,44,44,0.95), rgba(26,26,26,0.9));
+    border-bottom: 2px solid var(--primary);
+    flex-shrink: 0;
+  }
+  .manage-members-back-btn {
+    background: none; border: none; color: var(--primary);
+    font-size: 16px; font-weight: 600; cursor: pointer;
+    padding: 4px 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .manage-members-content {
+    flex: 1; overflow-y: auto; padding: 16px;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .manage-members-content::-webkit-scrollbar { display: none; }
+  .mm-section-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 13px; color: var(--accent-gold);
+    text-transform: uppercase; letter-spacing: 1px;
+    margin: 0 0 12px 0;
+  }
+  .mm-section-title:not(:first-child) {
+    margin-top: 24px;
+  }
+
   /* Restaurant management */
   .restaurant-mgmt-list { list-style: none; max-height: 200px; overflow-y: auto; scrollbar-width: none; }
   .restaurant-mgmt-list::-webkit-scrollbar { display: none; }
@@ -1106,17 +1171,11 @@
               <button onclick="mgmtAddRestaurant()">Add</button>
             </div>
           </div>
-          <!-- Members section (manager only) -->
+          <!-- Members section (manager only) - replaced with button -->
           <div class="settings-field">
-            <label>Members</label>
-            <div id="membersPendingSection" style="display:none;">
-              <div class="members-subsection-title">⏳ <span id="pendingCount">0</span></div>
-              <div id="membersPendingList" class="members-list"></div>
-            </div>
-            <div id="membersActiveSection">
-              <div class="members-subsection-title">✅ Members (<span id="activeCount">0</span>)</div>
-              <div id="membersActiveList" class="members-list"></div>
-            </div>
+            <button class="settings-manage-members-btn" onclick="openManageMembers()">
+              Manage Members <span id="pendingBadge" class="pending-badge" style="display:none;"></span>
+            </button>
           </div>
         </div>
         <!-- Push notification preferences (all users) -->
@@ -1168,6 +1227,27 @@
         <!-- Close button removed; use back arrow at top -->
         <button class="settings-logout" style="background:var(--primary);margin-top:16px;" onclick="restorePurchases()">Restore Purchases</button>
         <button class="settings-logout" onclick="logout()">Logout</button>
+      </div>
+    </div>
+
+    <!-- Manage Members Modal -->
+    <div class="manage-members-overlay" id="manageMembersOverlay" onclick="closeManageMembers()">
+      <div class="manage-members-modal" onclick="event.stopPropagation()">
+        <div class="manage-members-header">
+          <button class="manage-members-back-btn" onclick="closeManageMembers()">← Manage Members</button>
+        </div>
+        <div class="manage-members-content">
+          <!-- Pending members section -->
+          <div id="mmPendingSection" style="display:none;">
+            <div class="mm-section-title">⏳ PENDING (<span id="mmPendingCount">0</span>)</div>
+            <div id="mmPendingList" class="members-list"></div>
+          </div>
+          <!-- Active members section -->
+          <div id="mmActiveSection">
+            <div class="mm-section-title">✅ MEMBERS (<span id="mmActiveCount">0</span>)</div>
+            <div id="mmActiveList" class="members-list"></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -2021,7 +2101,10 @@ async function loadVotingScreen() {
   switchTab('vote');
   listenToBallots();
   updateVotingStatus();
-  if (isManager()) loadPendingBanner();
+  if (isManager()) {
+    loadPendingBanner();
+    updatePendingBadge();
+  }
 
   // Check status every minute
   setInterval(updateVotingStatus, 60000);
@@ -2316,7 +2399,7 @@ async function openSettings() {
   document.getElementById('managerSettings').style.display = mgr ? 'block' : 'none';
   if (mgr) {
     document.getElementById('settingsCloseTime').value = groupSettings.votingCloseTime;
-    loadGroupMembers();
+    updatePendingBadge();
   }
   // Load group switcher
   const groups = await loadAllGroups();
@@ -2556,6 +2639,13 @@ async function renderHistoryTab() {
 }
 
 // ===== PENDING MEMBERS =====
+// Helper to open Settings then Manage Members
+function openManageMembersDirect() {
+  openSettings();
+  // Delay to let Settings render, then open Manage Members on top
+  setTimeout(() => openManageMembers(), 100);
+}
+
 async function loadPendingBanner() {
   const bannerContainer = document.getElementById('pendingBanner');
   if (!bannerContainer) return;
@@ -2570,12 +2660,38 @@ async function loadPendingBanner() {
   const count = pendingSnapshot.size;
   const plural = count !== 1 ? 's' : '';
   bannerContainer.innerHTML = `
-    <div class="pending-notification-banner" onclick="openSettings()">
+    <div class="pending-notification-banner" onclick="openManageMembersDirect()">
       <div class="pending-notification-text">
         ⏳ <span class="pending-notification-count">${count}</span> pending member request${plural} — Tap to manage
       </div>
     </div>
   `;
+}
+
+// Open Manage Members modal
+function openManageMembers() {
+  document.getElementById('manageMembersOverlay').classList.add('show');
+  loadGroupMembers();
+}
+
+// Close Manage Members modal
+function closeManageMembers() {
+  document.getElementById('manageMembersOverlay').classList.remove('show');
+}
+
+// Update pending badge count
+async function updatePendingBadge() {
+  if (!currentGroup || !isManager()) return;
+  const pendingSnapshot = await db.collection('groups').doc(currentGroup).collection('pendingMembers').get();
+  const badge = document.getElementById('pendingBadge');
+  if (!badge) return;
+  
+  if (pendingSnapshot.empty) {
+    badge.style.display = 'none';
+  } else {
+    badge.textContent = `⏳ ${pendingSnapshot.size}`;
+    badge.style.display = 'inline-block';
+  }
 }
 
 async function loadGroupMembers() {
@@ -2587,15 +2703,15 @@ async function loadGroupMembers() {
 
   // Fetch pending members
   const pendingSnapshot = await db.collection('groups').doc(currentGroup).collection('pendingMembers').get();
-  const pendingList = document.getElementById('membersPendingList');
-  const pendingSection = document.getElementById('membersPendingSection');
-  const pendingCount = document.getElementById('pendingCount');
+  const pendingList = document.getElementById('mmPendingList');
+  const pendingSection = document.getElementById('mmPendingSection');
+  const pendingCount = document.getElementById('mmPendingCount');
   
   if (pendingSnapshot.empty) {
     pendingSection.style.display = 'none';
   } else {
     pendingSection.style.display = 'block';
-    pendingCount.textContent = `Pending (${pendingSnapshot.size})`;
+    pendingCount.textContent = pendingSnapshot.size;
     let pendingHtml = '';
     pendingSnapshot.forEach(doc => {
       const data = doc.data();
@@ -2617,8 +2733,8 @@ async function loadGroupMembers() {
 
   // Fetch active members
   const membersSnapshot = await db.collection('groups').doc(currentGroup).collection('members').get();
-  const membersList = document.getElementById('membersActiveList');
-  const activeCount = document.getElementById('activeCount');
+  const membersList = document.getElementById('mmActiveList');
+  const activeCount = document.getElementById('mmActiveCount');
   
   activeCount.textContent = membersSnapshot.size;
   
@@ -2677,6 +2793,7 @@ async function approveMember(userId) {
 
   showToast(`Approved ${data.displayName || data.email}! ✅`);
   loadGroupMembers();
+  updatePendingBadge();
   loadPendingBanner();
 }
 
@@ -2688,6 +2805,7 @@ async function denyMember(userId) {
   await pendingRef.delete();
   showToast(`Denied ${name}`);
   loadGroupMembers();
+  updatePendingBadge();
   loadPendingBanner();
 }
 
