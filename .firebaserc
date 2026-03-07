@@ -1,5 +1,18 @@
 {
   "projects": {
     "default": "lunch-bunch-jf"
-  }
+  },
+  "targets": {
+    "lunch-bunch-jf": {
+      "hosting": {
+        "lunch-bunch-jf": [
+          "lunch-bunch-jf"
+        ],
+        "lunch-bunch-jf-dev": [
+          "lunch-bunch-jf-dev"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
