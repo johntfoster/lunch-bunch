@@ -1315,6 +1315,7 @@ async function handleNotifToggle(type, enabled) {
 
   notifPrefs[type] = enabled;
   await saveNotifPrefs();
+  updateNotifToggles();
   setNotifStatusMsg(enabled ? 'Saved! ✓' : 'Disabled.');
   setTimeout(() => setNotifStatusMsg(''), 2000);
 }
@@ -1332,6 +1333,7 @@ function updateNotifToggles() {
   if (winnerEl) winnerEl.checked = notifPrefs.winner || false;
 
   // Update day button states
+  const anyNotifOn = (notifPrefs.reminder || false) || (notifPrefs.winner || false);
   document.querySelectorAll('.day-btn').forEach(btn => {
     const day = parseInt(btn.dataset.day);
     if (notifDays.includes(day)) {
@@ -1339,7 +1341,12 @@ function updateNotifToggles() {
     } else {
       btn.classList.remove('active');
     }
+    btn.disabled = !anyNotifOn;
+    btn.style.opacity = anyNotifOn ? '1' : '0.4';
+    btn.style.pointerEvents = anyNotifOn ? 'auto' : 'none';
   });
+  const daysLabel = document.querySelector('.notif-days-label');
+  if (daysLabel) daysLabel.style.opacity = anyNotifOn ? '1' : '0.4';
 
   // Dim notification section on non-native platforms (web browser)
   const section = document.getElementById('notifSettingsSection');
