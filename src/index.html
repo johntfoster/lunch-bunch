@@ -1324,6 +1324,16 @@ let notifPrefs = { reminder: false, winner: false };
 let notifDays = [1, 2, 3, 4, 5]; // Mon-Fri default (1=Monday, 7=Sunday)
 
 // ===== XSS PREVENTION =====
+function containsProfanity(text) {
+  const words = ['fuck','shit','ass','damn','bitch','bastard','dick','cock','pussy','cunt',
+    'asshole','motherfucker','fucker','bullshit','piss','whore','slut','fag','nigger','nigga',
+    'retard','twat'];
+  const normalized = text.toLowerCase().replace(/[^a-z]/g, ' ');
+  const tokens = normalized.split(/\s+/);
+  return tokens.some(t => words.includes(t)) ||
+    words.some(w => normalized.includes(w));
+}
+
 function escapeHtml(str) {
   if (!str) return '';
   const div = document.createElement('div');
@@ -2889,9 +2899,9 @@ function createFuzzyDropdown(container, options, onSelect, placeholder, opts) {
         return `<div class="fuzzy-dropdown-item" data-value="${escapeHtml(o.value)}"${dimmed}>${escapeHtml(o.label)}</div>`;
       }).join('');
     }
-    // Pinned "Create New Group" at bottom
+    // Pinned "Create New Group" at top
     if (showCreate) {
-      list.innerHTML += '<div class="fuzzy-dropdown-create" data-action="create">+ Create New Group</div>';
+      list.innerHTML = '<div class="fuzzy-dropdown-create" data-action="create">+ Create New Group</div>' + list.innerHTML;
     }
     list.querySelectorAll('.fuzzy-dropdown-item').forEach(item => {
       item.addEventListener('click', () => {
@@ -2987,6 +2997,7 @@ async function handleCreateGroup() {
   errEl.textContent = '';
   if (!name) { errEl.textContent = 'Please enter a group name'; return; }
   if (name.length < 3) { errEl.textContent = 'Name must be at least 3 characters'; return; }
+  if (containsProfanity(name)) { errEl.textContent = 'Please choose an appropriate group name'; return; }
 
   // Validate group name uniqueness before showing paywall
   const groupId = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
