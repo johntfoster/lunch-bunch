@@ -1345,7 +1345,7 @@ async function loadNotifPrefs() {
   try {
     const userDoc = await db.collection('users').doc(currentUser.uid).get();
     const data = userDoc.data() || {};
-    notifPrefs = { reminder: false, winner: false, ...(data.notificationPrefs || {}) };
+    notifPrefs = { reminder: true, winner: true, ...(data.notificationPrefs || {}) };
     notifDays = data.notifDays || [1, 2, 3, 4, 5]; // Default to Mon-Fri
   } catch (e) {
     console.error('[Push] Failed to load notif prefs:', e);

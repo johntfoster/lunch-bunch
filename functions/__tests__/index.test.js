@@ -634,6 +634,160 @@ describe('Cloud Functions Test Suite', () => {
     });
   });
 
+  // ===== onMemberApproved TESTS =====
+
+  describe('onMemberApproved', () => {
+    test('sends push notification to approved user', async () => {
+      const event = {
+        params: { groupId: 'group1', userId: 'user1' },
+        data: {
+          data: () => ({
+            email: 'newuser@example.com',
+            displayName: 'New User',
+          }),
+        },
+      };
+
+      mockDb.setDocument('groups/group1', {
+        name: 'Test Group',
+        managers: ['manager@example.com'],
+      });
+
+      mockDb.setDocument('users/user1', {
+        email: 'newuser@example.com',
+        fcmToken: 'user-token-123',
+      });
+
+      mockMessaging.sendEachForMulticast.mockResolvedValue({
+        successCount: 1,
+        failureCount: 0,
+      });
+
+      await functions.onMemberApproved(event);
+
+      expect(mockMessaging.sendEachForMulticast).toHaveBeenCalledWith({
+        tokens: ['user-token-123'],
+        notification: {
+          title: 'Request Approved! ✅',
+          body: "You've been approved to join Test Group",
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: 'default',
+              badge: 1,
+            },
+          },
+        },
+        data: {},
+      });
+    });
+
+    test('handles group not found', async () => {
+      const event = {
+        params: { groupId: 'nonexistent', userId: 'user1' },
+        data: {
+          data: () => ({
+            email: 'test@example.com',
+            displayName: 'Test User',
+          }),
+        },
+      };
+
+      await functions.onMemberApproved(event);
+
+      expect(console.error).toHaveBeenCalledWith('Group not found:', 'nonexistent');
+      expect(mockMessaging.sendEachForMulticast).not.toHaveBeenCalled();
+    });
+
+    test('handles user not found', async () => {
+      const event = {
+        params: { groupId: 'group1', userId: 'nonexistent' },
+        data: {
+          data: () => ({
+            email: 'test@example.com',
+            displayName: 'Test User',
+          }),
+        },
+      };
+
+      mockDb.setDocument('groups/group1', {
+        name: 'Test Group',
+        managers: ['manager@example.com'],
+      });
+
+      await functions.onMemberApproved(event);
+
+      expect(console.log).toHaveBeenCalledWith('User not found:', 'nonexistent');
+      expect(mockMessaging.sendEachForMulticast).not.toHaveBeenCalled();
+    });
+
+    test('handles user with no FCM token', async () => {
+      const event = {
+        params: { groupId: 'group1', userId: 'user1' },
+        data: {
+          data: () => ({
+            email: 'test@example.com',
+            displayName: 'Test User',
+          }),
+        },
+      };
+
+      mockDb.setDocument('groups/group1', {
+        name: 'Test Group',
+        managers: ['manager@example.com'],
+      });
+
+      mockDb.setDocument('users/user1', {
+        email: 'test@example.com',
+        // No fcmToken
+      });
+
+      await functions.onMemberApproved(event);
+
+      expect(console.log).toHaveBeenCalledWith('No FCM token for approved user:', 'user1');
+      expect(mockMessaging.sendEachForMulticast).not.toHaveBeenCalled();
+    });
+
+    test('sends notification with correct group name', async () => {
+      const event = {
+        params: { groupId: 'group1', userId: 'user1' },
+        data: {
+          data: () => ({
+            email: 'jane@example.com',
+            displayName: 'Jane Doe',
+          }),
+        },
+      };
+
+      mockDb.setDocument('groups/group1', {
+        name: 'Marketing Team',
+        managers: ['manager@example.com'],
+      });
+
+      mockDb.setDocument('users/user1', {
+        email: 'jane@example.com',
+        fcmToken: 'test-token',
+      });
+
+      mockMessaging.sendEachForMulticast.mockResolvedValue({
+        successCount: 1,
+        failureCount: 0,
+      });
+
+      await functions.onMemberApproved(event);
+
+      expect(mockMessaging.sendEachForMulticast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notification: {
+            title: 'Request Approved! ✅',
+            body: "You've been approved to join Marketing Team",
+          },
+        })
+      );
+    });
+  });
+
   // ===== sendVotingReminders TESTS =====
 
   describe('sendVotingReminders', () => {
