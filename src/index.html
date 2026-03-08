@@ -206,49 +206,8 @@
   .login-btn-google { background: #fff; color: #1a1a1a; border-color: #666; }
   .login-btn-google:hover { background: #f5f5f5; }
 
-  .login-btn-email { background: transparent; color: var(--accent-gold); border-color: var(--medium-gray); }
-  .login-btn-email:hover { border-color: var(--primary); }
-
-  .login-divider {
-    display: flex; align-items: center; gap: 12px;
-    margin: 16px 0; width: 100%; max-width: 300px;
-    color: var(--medium-gray); font-size: 11px;
-  }
-  .login-divider::before, .login-divider::after {
-    content: ''; flex: 1; height: 1px; background: var(--medium-gray);
-  }
-
-  .login-form { width: 100%; max-width: 300px; display: none; }
-  .login-form.show { display: block; }
-
-  .login-input {
-    width: 100%; padding: 12px 14px; border-radius: 10px;
-    border: 1px solid #333; background: rgba(0,0,0,0.4);
-    color: var(--text); font-family: 'Source Sans 3', sans-serif;
-    font-size: 16px; margin-bottom: 10px; outline: none;
-    transition: border-color 0.2s;
-  }
-  .login-input:focus { border-color: var(--primary); }
-  .login-input::placeholder { color: #666; }
-
-  .login-submit {
-    width: 100%; padding: 14px; border-radius: 12px; border: none;
-    background: linear-gradient(135deg, var(--primary-dark), var(--primary));
-    color: #fff; font-family: 'Oswald', sans-serif; font-size: 16px;
-    font-weight: 600; text-transform: uppercase; letter-spacing: 2px;
-    cursor: pointer; margin-top: 4px; transition: all 0.2s; min-height: 48px;
-  }
-  .login-submit:hover { transform: translateY(-1px); filter: brightness(1.1); }
-
-  .login-error {
-    color: var(--danger); font-size: 13px; margin-top: 8px;
-    text-align: center; min-height: 20px;
-  }
-
-  .login-toggle {
-    color: var(--text-muted); font-size: 13px; margin-top: 12px;
-    cursor: pointer; text-decoration: underline;
-  }
+  .login-btn-apple { background: #000; color: #fff; border-color: #333; }
+  .login-btn-apple:hover { background: #1a1a1a; }
 
   /* ===== GROUP SELECT ===== */
   #groupScreen {
@@ -1110,23 +1069,15 @@
     <div class="login-title">Lunch Bunch</div>
     <div class="login-tagline">Vote • Eat • Repeat</div>
 
+    <button class="login-btn login-btn-apple" onclick="appleSignIn()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
+      Sign in with Apple
+    </button>
+
     <button class="login-btn login-btn-google" onclick="googleSignIn()">
       <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
       Sign in with Google
     </button>
-
-    <div class="login-divider">or</div>
-
-    <button class="login-btn login-btn-email" onclick="toggleEmailForm()">
-      ✉️ Sign in with Email
-    </button>
-
-    <div id="emailForm" class="login-form">
-      <input type="email" id="loginEmail" class="login-input" placeholder="Email address">
-      <input type="password" id="loginPassword" class="login-input" placeholder="Password">
-      <button class="login-submit" onclick="emailSignIn()">Sign In</button>
-      <div id="loginError" class="login-error"></div>
-    </div>
   </div>
 
   <!-- GROUP SELECT -->
@@ -1782,43 +1733,43 @@ async function googleSignIn() {
   }
 }
 
-function toggleEmailForm() {
-  const form = document.getElementById('emailForm');
-  form.classList.toggle('show');
-  if (form.classList.contains('show')) {
-    setTimeout(() => {
-      document.getElementById('loginEmail').focus();
-    }, 100);
+async function appleSignIn() {
+  if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+    try {
+      const result = await Capacitor.Plugins.FirebaseAuthentication.signInWithApple();
+      const provider = new firebase.auth.OAuthProvider('apple.com');
+      const credential = provider.credential({
+        idToken: result.credential.idToken,
+        rawNonce: result.credential.nonce
+      });
+      await auth.signInWithCredential(credential);
+    } catch (error) {
+      console.error('Native Apple sign-in error:', error);
+      showToast('Apple sign-in failed: ' + (error.message || 'Unknown error'));
+    }
+  } else {
+    const provider = new firebase.auth.OAuthProvider('apple.com');
+    provider.addScope('email');
+    provider.addScope('name');
+    auth.signInWithPopup(provider).catch(err => {
+      if (err.code === 'auth/popup-blocked' ||
+          err.code === 'auth/operation-not-supported-in-this-environment') {
+        auth.signInWithRedirect(provider);
+      } else {
+        showToast('Apple sign-in failed: ' + err.message);
+      }
+    });
   }
 }
 
 // Scroll focused inputs into view when iOS keyboard opens
 document.addEventListener('focusin', function(e) {
-  if (e.target.closest('#emailForm') || e.target.closest('#groupScreen')) {
+  if (e.target.closest('#groupScreen')) {
     setTimeout(() => {
       e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 300);
   }
 });
-
-function emailSignIn() {
-  const email = document.getElementById('loginEmail').value.trim();
-  const password = document.getElementById('loginPassword').value;
-  const errEl = document.getElementById('loginError');
-  errEl.textContent = '';
-
-  if (!email || !password) { errEl.textContent = 'Please fill in all fields'; return; }
-
-  auth.signInWithEmailAndPassword(email, password).catch(err => {
-    if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-      auth.createUserWithEmailAndPassword(email, password).catch(e => {
-        errEl.textContent = e.message;
-      });
-    } else {
-      errEl.textContent = err.message;
-    }
-  });
-}
 
 function logout() {
   if (ballotUnsubscribe) { ballotUnsubscribe(); ballotUnsubscribe = null; }
