@@ -1756,16 +1756,40 @@ async function appleSignIn() {
       await auth.signInWithCredential(credential);
     } catch (error) {
       console.error('Native Apple sign-in error:', error);
-      showToast('Apple sign-in failed: ' + (error.message || 'Unknown error'));
+      
+      // Handle account exists with different credential
+      if (error.code === 'auth/account-exists-with-different-credential') {
+        try {
+          const email = error.email;
+          const methods = await auth.fetchSignInMethodsForEmail(email);
+          const existingMethod = methods[0] === 'google.com' ? 'Google' : methods[0];
+          
+          showToast(`This email was registered with ${existingMethod}. Sign out of Google first, then try Apple.`, 5000);
+        } catch (e) {
+          showToast('This email is already registered. Please use your original sign-in method.', 5000);
+        }
+      } else {
+        showToast('Apple sign-in failed: ' + (error.message || 'Unknown error'));
+      }
     }
   } else {
     const provider = new firebase.auth.OAuthProvider('apple.com');
     provider.addScope('email');
     provider.addScope('name');
-    auth.signInWithPopup(provider).catch(err => {
+    auth.signInWithPopup(provider).catch(async (err) => {
       if (err.code === 'auth/popup-blocked' ||
           err.code === 'auth/operation-not-supported-in-this-environment') {
         auth.signInWithRedirect(provider);
+      } else if (err.code === 'auth/account-exists-with-different-credential') {
+        try {
+          const email = err.email;
+          const methods = await auth.fetchSignInMethodsForEmail(email);
+          const existingMethod = methods[0] === 'google.com' ? 'Google' : methods[0];
+          
+          showToast(`This email was registered with ${existingMethod}. Sign out of Google first, then try Apple.`, 5000);
+        } catch (e) {
+          showToast('This email is already registered. Please use your original sign-in method.', 5000);
+        }
       } else {
         showToast('Apple sign-in failed: ' + err.message);
       }
