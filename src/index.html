@@ -729,7 +729,7 @@
     width: 100%; padding: 12px 14px; border-radius: 10px;
     border: 1px solid var(--medium-gray); background: var(--near-black);
     color: var(--text); font-family: 'Source Sans 3', sans-serif;
-    font-size: 15px; outline: none; transition: border-color 0.2s;
+    font-size: 16px; outline: none; transition: border-color 0.2s;
   }
   .fuzzy-dropdown input:focus { border-color: var(--primary); }
   .fuzzy-dropdown input::placeholder { color: #666; }
@@ -1792,9 +1792,9 @@ function toggleEmailForm() {
   }
 }
 
-// Scroll focused login inputs into view when iOS keyboard opens
+// Scroll focused inputs into view when iOS keyboard opens
 document.addEventListener('focusin', function(e) {
-  if (e.target.closest('#emailForm')) {
+  if (e.target.closest('#emailForm') || e.target.closest('#groupScreen')) {
     setTimeout(() => {
       e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 300);
