@@ -297,7 +297,6 @@
     text-align: center;
     padding: 12px 16px 10px;
     padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
-    margin-top: calc(-1 * env(safe-area-inset-top, 0px));
     background: linear-gradient(180deg, rgba(44,44,44,0.95), rgba(26,26,26,0.9));
     border-bottom: 2px solid var(--primary);
     flex-shrink: 0;
@@ -495,7 +494,6 @@
     flex-shrink: 0;
     padding: 12px 16px;
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
-    margin-bottom: calc(-1 * env(safe-area-inset-bottom, 0px));
     border-top: 1px solid var(--medium-gray);
     overflow-y: auto;
     max-height: 40vh;
@@ -2960,7 +2958,7 @@ async function handleCreateGroup() {
   const sub = await checkSubscription();
   if (sub.active) {
     closeCreateGroup();
-    await createGroupAfterPurchase(null);
+    await createGroupAfterPurchase(null, name);
     return;
   }
 
@@ -2994,11 +2992,11 @@ async function handleCreateGroup() {
   if (!customerInfo) return; // cancelled or failed
 
   closeCreateGroup();
-  await createGroupAfterPurchase(customerInfo);
+  await createGroupAfterPurchase(customerInfo, name);
 }
 
-async function createGroupAfterPurchase(customerInfo) {
-  const name = document.getElementById('paywallGroupName').textContent;
+async function createGroupAfterPurchase(customerInfo, groupName) {
+  const name = groupName || (document.getElementById('createGroupName') && document.getElementById('createGroupName').value.trim()) || 'New Group';
   const groupId = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
   try {
