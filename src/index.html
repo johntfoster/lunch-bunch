@@ -1747,15 +1747,30 @@ async function googleSignIn() {
 async function appleSignIn() {
   if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     try {
+      console.log('[Apple] Starting native Apple sign-in...');
       const result = await Capacitor.Plugins.FirebaseAuthentication.signInWithApple();
+      console.log('[Apple] Got Apple credential:', {
+        hasIdToken: !!result.credential.idToken,
+        hasNonce: !!result.credential.nonce,
+        user: result.user?.email
+      });
+      
       const provider = new firebase.auth.OAuthProvider('apple.com');
       const credential = provider.credential({
         idToken: result.credential.idToken,
         rawNonce: result.credential.nonce
       });
+      
+      console.log('[Apple] Signing in to Firebase with credential...');
       await auth.signInWithCredential(credential);
+      console.log('[Apple] Sign-in successful!');
     } catch (error) {
-      console.error('Native Apple sign-in error:', error);
+      console.error('[Apple] Sign-in error:', {
+        code: error.code,
+        message: error.message,
+        email: error.email,
+        fullError: error
+      });
       
       // Handle account exists with different credential
       if (error.code === 'auth/account-exists-with-different-credential') {
@@ -1768,8 +1783,10 @@ async function appleSignIn() {
         } catch (e) {
           showToast('This email is already registered. Please use your original sign-in method.', 5000);
         }
+      } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/missing-or-invalid-nonce') {
+        showToast('Apple sign-in credential error. Please try again.', 5000);
       } else {
-        showToast('Apple sign-in failed: ' + (error.message || 'Unknown error'));
+        showToast('Apple sign-in failed: ' + (error.message || error.code || 'Unknown error'));
       }
     }
   } else {
