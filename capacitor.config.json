@@ -14,7 +14,7 @@
   },
   "ios": {
     "scheme": "Lunch Bunch",
-    "contentInset": "always"
+    "contentInset": "automatic"
   },
   "server": {
     "androidScheme": "https",
