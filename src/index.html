@@ -2013,24 +2013,14 @@ function showPendingState() {
       const lb = groupScreen.querySelector('.pending-logout');
       if (lb) lb.remove();
 
-      // Check if user is a member or manager of ANY group
-      const groupsSnapshot = await db.collection('groups').get();
-      for (const groupDoc of groupsSnapshot.docs) {
-        const groupData = groupDoc.data();
-        const managers = groupData.managers || [];
-        const memberDoc = await db.collection('groups').doc(groupDoc.id).collection('members').doc(currentUser.uid).get();
-        if (managers.includes(currentUser.email) || memberDoc.exists) {
-          // User is a member of this group — redirect to group selection screen
-          currentGroup = null;
-          navigateToScreen('groupScreen');
-          initGroupSelectScreen();
-          return;
-        }
-      }
-
-      // No groups — stay on group selection screen
+      // Reset UI to group selection state
       currentGroup = null;
-      navigateToScreen('groupScreen');
+      const searchContainer = document.getElementById('groupSelectDropdown');
+      if (searchContainer) searchContainer.style.display = '';
+      groupScreen.querySelector('.group-join-btn').style.display = '';
+      groupScreen.querySelector('.group-title').textContent = 'Select or Create a Group';
+      
+      // Re-initialize dropdown
       initGroupSelectScreen();
     };
     groupScreen.appendChild(goBackBtn);
