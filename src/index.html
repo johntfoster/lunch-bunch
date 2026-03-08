@@ -1309,20 +1309,31 @@ async function initPushNotifications() {
     }
   });
 
-  // Try getting token directly via plugin (delay to let APNs token arrive)
+  // Request permissions and get token
   try {
-    const perm = await FirebaseMessaging.checkPermissions();
+    let perm = await FirebaseMessaging.checkPermissions();
+    
+    // Request permissions if not granted
+    if (perm.receive !== 'granted') {
+      console.log('[Push] Requesting permissions...');
+      perm = await FirebaseMessaging.requestPermissions();
+    }
+    
     if (perm.receive === 'granted') {
+      console.log('[Push] Permissions granted, getting token...');
       // Wait for APNs token to be forwarded from AppDelegate
       await new Promise(r => setTimeout(r, 3000));
       const result = await FirebaseMessaging.getToken();
       if (result && result.token && currentUser) {
         fcmToken = result.token;
         await saveFcmToken(result.token);
+        console.log('[Push] FCM token saved');
       }
+    } else {
+      console.log('[Push] Permissions not granted');
     }
   } catch (e) {
-    // getToken on init skipped
+    console.error('[Push] Init error:', e);
   }
 }
 
