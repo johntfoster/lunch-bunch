@@ -2446,11 +2446,6 @@ async function castVote(restaurantId, restaurantName) {
     return;
   }
 
-  if (userVote) {
-    showToast('You already voted today!');
-    return;
-  }
-
   // Verify membership before allowing vote
   const isMember = await verifyMembership();
   if (!isMember) {
@@ -2461,7 +2456,9 @@ async function castVote(restaurantId, restaurantName) {
     return;
   }
 
+  const isChangingVote = !!userVote;
   const today = getCSTDateString();
+  
   try {
     await db.collection('groups').doc(currentGroup)
       .collection('votes').doc(today)
@@ -2472,7 +2469,11 @@ async function castVote(restaurantId, restaurantName) {
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
       });
 
-    showToast('Vote cast! 🗳️');
+    if (isChangingVote) {
+      showToast('Vote changed! 🔄');
+    } else {
+      showToast('Vote cast! 🗳️');
+    }
   } catch (e) {
     showToast('Error voting: ' + e.message);
   }
