@@ -213,6 +213,11 @@ jest.mock('firebase-admin/app', () => ({
 
 jest.mock('firebase-admin/firestore', () => ({
   getFirestore: jest.fn(() => mockDb),
+  FieldValue: {
+    arrayUnion: jest.fn((...values) => ({ _arrayUnion: values })),
+    serverTimestamp: jest.fn(() => ({ _serverTimestamp: true })),
+    delete: jest.fn(() => ({ _delete: true })),
+  },
 }));
 
 jest.mock('firebase-admin/messaging', () => ({
@@ -852,6 +857,107 @@ describe('Cloud Functions Test Suite', () => {
       });
 
       await expect(functions.sendWinnerAnnouncements()).resolves.not.toThrow();
+    });
+
+    test('auto-promotes winning daily extra to permanent list', async () => {
+      const today = functions.getCSTDateString();
+      const currentTime = functions.getCSTTimeString();
+      
+      mockDb.setDocument('groups/group1', {
+        name: 'Test Group',
+        settings: { votingCloseTime: currentTime },
+        restaurants: [
+          { id: 'pizza-place', name: 'Pizza Place' }
+        ],
+        managers: ['manager@example.com'],
+      });
+
+      // Votes for a daily extra "Taco Shack" that's NOT in permanent list
+      mockDb.setDocument(`groups/group1/votes/${today}/ballots/user1`, {
+        restaurantName: 'Taco Shack',
+      });
+      mockDb.setDocument(`groups/group1/votes/${today}/ballots/user2`, {
+        restaurantName: 'Taco Shack',
+      });
+
+      mockDb.setDocument('users/user1', {
+        email: 'user1@example.com',
+        fcmToken: 'token1',
+        notificationPrefs: { winner: true },
+        notifDays: [1, 2, 3, 4, 5, 6, 7],
+      });
+      mockDb.setDocument('groups/group1/members/user1', {
+        email: 'user1@example.com',
+      });
+
+      mockMessaging.sendEachForMulticast.mockResolvedValue({
+        successCount: 1,
+        failureCount: 0,
+      });
+
+      await functions.sendWinnerAnnouncements();
+
+      // Verify Taco Shack was added to permanent list via arrayUnion
+      const groupUpdate = mockDb.getWrites().find(
+        w => w.path === 'groups/group1' && 
+        w.type === 'update' && 
+        w.data.restaurants
+      );
+
+      expect(groupUpdate).toBeDefined();
+      expect(groupUpdate.data.restaurants).toEqual({
+        _arrayUnion: [
+          {
+            id: 'taco-shack',
+            name: 'Taco Shack'
+          }
+        ]
+      });
+    });
+
+    test('does not duplicate restaurant if winner already in permanent list', async () => {
+      const today = functions.getCSTDateString();
+      const currentTime = functions.getCSTTimeString();
+      
+      mockDb.setDocument('groups/group1', {
+        name: 'Test Group',
+        settings: { votingCloseTime: currentTime },
+        restaurants: [
+          { id: 'pizza-place', name: 'Pizza Place' }
+        ],
+        managers: ['manager@example.com'],
+      });
+
+      // Votes for Pizza Place which IS in permanent list
+      mockDb.setDocument(`groups/group1/votes/${today}/ballots/user1`, {
+        restaurantName: 'Pizza Place',
+      });
+
+      mockDb.setDocument('users/user1', {
+        email: 'user1@example.com',
+        fcmToken: 'token1',
+        notificationPrefs: { winner: true },
+        notifDays: [1, 2, 3, 4, 5, 6, 7],
+      });
+      mockDb.setDocument('groups/group1/members/user1', {
+        email: 'user1@example.com',
+      });
+
+      mockMessaging.sendEachForMulticast.mockResolvedValue({
+        successCount: 1,
+        failureCount: 0,
+      });
+
+      await functions.sendWinnerAnnouncements();
+
+      // Verify no restaurant update (Pizza Place already permanent)
+      const restaurantUpdate = mockDb.getWrites().find(
+        w => w.path === 'groups/group1' && 
+        w.type === 'update' && 
+        w.data.restaurants
+      );
+
+      expect(restaurantUpdate).toBeUndefined();
     });
   });
 

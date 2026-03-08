@@ -3,7 +3,7 @@ const { onRequest } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
-const { getFirestore } = require("firebase-admin/firestore");
+const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 
 initializeApp();
@@ -375,6 +375,20 @@ exports.sendWinnerAnnouncements = onSchedule(
       const winner = tied[Math.floor(Math.random() * tied.length)][0];
       const winnerVotes = tally[winner];
       const totalVotes = Object.values(tally).reduce((s, v) => s + v, 0);
+
+      // Auto-promote daily extra to permanent list if it wins
+      const permanentRestaurants = groupData.restaurants || [];
+      const winnerId = winner.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const alreadyPermanent = permanentRestaurants.some(
+        r => r.id === winnerId || r.name.toLowerCase() === winner.toLowerCase()
+      );
+
+      if (!alreadyPermanent) {
+        console.log(`[Winners] Auto-promoting "${winner}" to permanent list for group ${groupId}`);
+        await db.collection("groups").doc(groupId).update({
+          restaurants: FieldValue.arrayUnion({ id: winnerId, name: winner })
+        });
+      }
 
       // Get recipients who want winner notifications (filtered by active days)
       const recipients = await getGroupNotifRecipients(groupId, "winner", currentDay);
