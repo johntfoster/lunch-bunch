@@ -2105,6 +2105,7 @@ async function loadVotingScreen() {
 
   switchTab('vote');
   listenToBallots();
+  listenToMembership();
   updateVotingStatus();
   if (isManager()) {
     loadPendingBanner();
@@ -2113,6 +2114,22 @@ async function loadVotingScreen() {
 
   // Check status every minute
   setInterval(updateVotingStatus, 60000);
+}
+
+// Listen for membership changes (if removed, redirect to group select)
+function listenToMembership() {
+  if (!currentGroup || !currentUser) return;
+  
+  // Listen to current user's member document
+  db.collection('groups').doc(currentGroup).collection('members').doc(currentUser.uid)
+    .onSnapshot(doc => {
+      if (!doc.exists && !isManager()) {
+        // User was removed and is not a manager
+        showToast('You have been removed from this group');
+        currentGroup = null;
+        setTimeout(() => showGroupSelectScreen(), 2000);
+      }
+    });
 }
 
 async function loadWinCounts() {
@@ -2382,6 +2399,16 @@ async function castVote(restaurantId, restaurantName) {
     return;
   }
 
+  // Verify membership before allowing vote
+  const isMember = await verifyMembership();
+  if (!isMember) {
+    showToast('You are no longer a member of this group');
+    currentGroup = null;
+    await db.collection('users').doc(currentUser.uid).update({ selectedGroup: firebase.firestore.FieldValue.delete() });
+    showGroupSelectScreen();
+    return;
+  }
+
   const today = getCSTDateString();
   try {
     await db.collection('groups').doc(currentGroup)
@@ -2397,6 +2424,20 @@ async function castVote(restaurantId, restaurantName) {
   } catch (e) {
     showToast('Error voting: ' + e.message);
   }
+}
+
+// Verify current user is still a member or manager of current group
+async function verifyMembership() {
+  if (!currentGroup || !currentUser) return false;
+  
+  const groupDoc = await db.collection('groups').doc(currentGroup).get();
+  if (!groupDoc.exists) return false;
+  
+  const managers = groupDoc.data().managers || [];
+  if (managers.includes(currentUser.email)) return true;
+  
+  const memberDoc = await db.collection('groups').doc(currentGroup).collection('members').doc(currentUser.uid).get();
+  return memberDoc.exists;
 }
 
 async function openSettings() {
@@ -2824,6 +2865,12 @@ async function removeMember(userId, displayName) {
   
   try {
     await db.collection('groups').doc(currentGroup).collection('members').doc(userId).delete();
+    
+    // Clear the removed user's selectedGroup so they can't access this group anymore
+    await db.collection('users').doc(userId).update({
+      selectedGroup: firebase.firestore.FieldValue.delete()
+    });
+    
     showToast(`Removed ${displayName}`);
     loadGroupMembers();
   } catch (error) {
