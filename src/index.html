@@ -693,10 +693,10 @@
   .fuzzy-dropdown input:focus { border-color: var(--primary); }
   .fuzzy-dropdown input::placeholder { color: #666; }
   .fuzzy-dropdown-list {
-    display: none; position: absolute; top: 100%; left: 0; right: 0;
+    display: none; position: absolute; bottom: 100%; left: 0; right: 0;
     max-height: 200px; overflow-y: auto; z-index: 10;
     background: var(--dark-steel); border: 1px solid var(--medium-gray);
-    border-radius: 0 0 10px 10px; margin-top: -1px;
+    border-radius: 10px 10px 0 0; margin-bottom: -1px;
     scrollbar-width: none;
   }
   .fuzzy-dropdown-list::-webkit-scrollbar { display: none; }
@@ -2838,7 +2838,7 @@ function createFuzzyDropdown(container, options, onSelect, placeholder, opts) {
   container.innerHTML = '';
   const input = document.createElement('input');
   input.type = 'text';
-  input.placeholder = placeholder || 'Search...';
+  input.placeholder = placeholder || 'Begin typing to search...';
   const list = document.createElement('div');
   list.className = 'fuzzy-dropdown-list';
   container.appendChild(input);
@@ -2908,7 +2908,7 @@ let settingsGroupInstance = null;
 async function initGroupSelectScreen() {
   const groups = await loadAllGroups();
   const container = document.getElementById('groupSelectDropdown');
-  groupSelectInstance = createFuzzyDropdown(container, groups, null, 'Search groups...', { showCreate: true });
+  groupSelectInstance = createFuzzyDropdown(container, groups, null, 'Begin typing the name of the group...', { showCreate: true });
 }
 
 // ===== CREATE GROUP =====

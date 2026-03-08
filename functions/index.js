@@ -59,6 +59,43 @@ exports.onPendingMemberCreated = onDocumentCreated(
   }
 );
 
+// Firestore trigger: send push notification when member approved (member document created)
+exports.onMemberApproved = onDocumentCreated(
+  {
+    document: "groups/{groupId}/members/{userId}",
+  },
+  async (event) => {
+    const { groupId, userId } = event.params;
+
+    const groupDoc = await db.collection("groups").doc(groupId).get();
+    if (!groupDoc.exists) {
+      console.error("Group not found:", groupId);
+      return;
+    }
+    const groupName = groupDoc.data().name || groupId;
+
+    // Get the approved user's FCM token
+    const userDoc = await db.collection("users").doc(userId).get();
+    if (!userDoc.exists) {
+      console.log("User not found:", userId);
+      return;
+    }
+
+    const fcmToken = userDoc.data().fcmToken;
+    if (!fcmToken) {
+      console.log("No FCM token for approved user:", userId);
+      return;
+    }
+
+    await sendFcmNotifications(
+      [fcmToken],
+      "Request Approved! ✅",
+      `You've been approved to join ${groupName}`
+    );
+    console.log(`Sent approval notification to ${userId} for ${groupName}`);
+  }
+);
+
 // ===== PUSH NOTIFICATION HELPERS =====
 
 /**
