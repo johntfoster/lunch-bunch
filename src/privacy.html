@@ -1,62 +1,157 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Privacy Policy - Lunch Bunch</title>
-<style>
-body { font-family: -apple-system, system-ui, sans-serif; max-width: 700px; margin: 0 auto; padding: 24px; color: #333; line-height: 1.6; }
-h1 { color: #bf5700; }
-h2 { color: #555; margin-top: 2em; }
-p, ul { margin: 1em 0; }
-li { margin: 0.5em 0; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy - Lunch Bunch</title>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #bf5700;
+      --text: #ecf0f1;
+      --text-muted: #95a5a6;
+      --near-black: #1a1a1a;
+      --dark-steel: #2c2c2c;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Source Sans 3', sans-serif;
+      background: var(--near-black);
+      color: var(--text);
+      line-height: 1.7;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: var(--dark-steel);
+      border-radius: 12px;
+      padding: 40px;
+    }
+    h1 {
+      font-family: 'Oswald', sans-serif;
+      color: var(--primary);
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+    h2 {
+      font-family: 'Oswald', sans-serif;
+      color: var(--text);
+      font-size: 22px;
+      margin-top: 32px;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    p, li {
+      color: var(--text);
+      font-size: 16px;
+      margin-bottom: 12px;
+    }
+    ul {
+      margin-left: 20px;
+      margin-bottom: 16px;
+    }
+    li {
+      margin-bottom: 8px;
+    }
+    strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+    a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    .updated {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+    .footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    @media (max-width: 600px) {
+      .container {
+        padding: 24px;
+      }
+      h1 {
+        font-size: 28px;
+      }
+      h2 {
+        font-size: 20px;
+      }
+    }
+  </style>
 </head>
 <body>
-<h1>Privacy Policy</h1>
-<p><strong>Effective Date:</strong> February 19, 2026</p>
+  <div class="container">
+    <h1>Privacy Policy</h1>
+    <p class="updated">Last updated: March 8, 2026</p>
 
-<h2>1. Information We Collect</h2>
-<p>When you use Lunch Bunch, we collect:</p>
-<ul>
-<li><strong>Account information:</strong> Your Google account name, email address, and profile photo (provided via Google Sign-In).</li>
-<li><strong>Usage data:</strong> Your votes, group memberships, and app interactions stored in our database.</li>
-<li><strong>Device tokens:</strong> Push notification tokens for delivering voting reminders and winner announcements.</li>
-</ul>
+    <p>Lunch Bunch ("we", "us", "our") respects your privacy. This policy explains what information we collect, how we use it, and your choices.</p>
 
-<h2>2. How We Use Your Information</h2>
-<p>We use your information to:</p>
-<ul>
-<li>Provide and operate the App's voting and group management features.</li>
-<li>Send push notifications (voting reminders and winner announcements) if you opt in.</li>
-<li>Send email notifications to group managers about membership requests.</li>
-<li>Improve the App and fix issues.</li>
-</ul>
+    <h2>Information We Collect</h2>
+    
+    <p><strong>Account Information</strong></p>
+    <ul>
+      <li><strong>Email address:</strong> Used to create and authenticate your account.</li>
+      <li><strong>Display name:</strong> Shown to other members of your groups.</li>
+    </ul>
 
-<h2>3. Data Storage</h2>
-<p>Your data is stored in Google Firebase (Firestore) servers located in the United States. We use industry-standard security measures to protect your data.</p>
+    <p><strong>Usage Data</strong></p>
+    <ul>
+      <li><strong>Votes and restaurant suggestions:</strong> Stored to operate the voting feature.</li>
+      <li><strong>Group membership:</strong> Stored to associate you with your groups.</li>
+    </ul>
 
-<h2>4. Data Sharing</h2>
-<p>We do not sell your personal information. We may share data with:</p>
-<ul>
-<li><strong>Firebase/Google:</strong> For authentication, database, and push notification services.</li>
-<li><strong>RevenueCat:</strong> For subscription management (anonymous app user IDs only).</li>
-<li><strong>SendGrid:</strong> For transactional email delivery to group managers.</li>
-</ul>
+    <p><strong>Device Information</strong></p>
+    <ul>
+      <li><strong>Push notification tokens (Firebase Cloud Messaging):</strong> Used solely to deliver vote reminders and winner announcements.</li>
+      <li>We do not collect device identifiers for advertising or tracking purposes.</li>
+    </ul>
 
-<h2>5. Your Rights</h2>
-<p>You may request deletion of your account and associated data by contacting us. Group managers can remove members from their groups at any time.</p>
+    <h2>How We Use Your Information</h2>
+    <ul>
+      <li>To operate the app: authenticate you, run votes, deliver results.</li>
+      <li>To send push notifications: reminders to vote and winner announcements.</li>
+      <li>To improve the service: aggregate, anonymized usage patterns.</li>
+    </ul>
 
-<h2>6. Push Notifications</h2>
-<p>You can enable or disable push notifications in the App's settings. Disabling notifications will stop voting reminders and winner announcements.</p>
+    <p>We do not sell, rent, or share your personal information with third parties for marketing purposes.</p>
 
-<h2>7. Children's Privacy</h2>
-<p>The App is not intended for children under 13. We do not knowingly collect information from children under 13.</p>
+    <h2>Third-Party Services</h2>
+    <p>Lunch Bunch uses the following third-party services:</p>
+    <ul>
+      <li><strong>Firebase (Google):</strong> Authentication, database, cloud functions, and push notifications. See Google's privacy policy at <a href="https://policies.google.com/privacy" target="_blank">https://policies.google.com/privacy</a>.</li>
+      <li><strong>RevenueCat:</strong> Subscription management. See RevenueCat's privacy policy at <a href="https://www.revenuecat.com/privacy" target="_blank">https://www.revenuecat.com/privacy</a>.</li>
+      <li><strong>Apple:</strong> App Store purchase processing. See Apple's privacy policy at <a href="https://www.apple.com/privacy" target="_blank">https://www.apple.com/privacy</a>.</li>
+    </ul>
 
-<h2>8. Changes to This Policy</h2>
-<p>We may update this Privacy Policy from time to time. We will notify you of significant changes through the App.</p>
+    <h2>Data Retention</h2>
+    <p>Your account data is retained as long as your account is active. You may request deletion of your account and associated data at any time by contacting us at <a href="mailto:support@lunchbunch.app">support@lunchbunch.app</a>.</p>
 
-<h2>9. Contact</h2>
-<p>Questions about this Privacy Policy? Contact us at <a href="mailto:johntfosterjr@gmail.com">johntfosterjr@gmail.com</a>.</p>
+    <h2>Children's Privacy</h2>
+    <p>Lunch Bunch is not intended for children under 13. We do not knowingly collect information from children under 13.</p>
+
+    <h2>Changes to This Policy</h2>
+    <p>We may update this policy from time to time. We will notify you of material changes through the app or by email.</p>
+
+    <h2>Contact Us</h2>
+    <p>If you have questions about this policy, contact us at:<br>
+    <a href="mailto:support@lunchbunch.app">support@lunchbunch.app</a></p>
+
+    <div class="footer">
+      © 2026 Lunch Bunch. All rights reserved.
+    </div>
+  </div>
 </body>
 </html>
