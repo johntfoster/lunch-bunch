@@ -2021,13 +2021,50 @@ function showPendingState() {
   }
   pendingMsg.textContent = 'Request sent! A group manager will approve your access. Check back soon.';
 
+  // Add Go Back button
+  let goBackBtn = groupScreen.querySelector('.pending-go-back');
+  if (!goBackBtn) {
+    goBackBtn = document.createElement('button');
+    goBackBtn.className = 'pending-go-back';
+    goBackBtn.textContent = 'Go Back';
+    goBackBtn.style.cssText = 'margin-top:20px;background:var(--accent);color:#fff;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;';
+    goBackBtn.onclick = async () => {
+      // Remove pending UI elements
+      const pm = groupScreen.querySelector('.pending-msg');
+      if (pm) pm.remove();
+      const gb = groupScreen.querySelector('.pending-go-back');
+      if (gb) gb.remove();
+      const lb = groupScreen.querySelector('.pending-logout');
+      if (lb) lb.remove();
+
+      // Check if user has a saved group they're actually a member of
+      const userDoc = await db.collection('users').doc(currentUser.uid).get();
+      const savedGroup = userDoc.data()?.selectedGroup;
+      if (savedGroup) {
+        const groupDoc = await db.collection('groups').doc(savedGroup).get();
+        const managers = groupDoc.exists ? (groupDoc.data().managers || []) : [];
+        const memberDoc = await db.collection('groups').doc(savedGroup).collection('members').doc(currentUser.uid).get();
+        if (managers.includes(currentUser.email) || memberDoc.exists) {
+          currentGroup = savedGroup;
+          loadVotingScreen();
+          return;
+        }
+      }
+      // No previous group — show group selection
+      currentGroup = null;
+      navigateToScreen('groupScreen');
+      initGroupSelectScreen();
+    };
+    groupScreen.appendChild(goBackBtn);
+  }
+
   // Add logout button
   let logoutBtn = groupScreen.querySelector('.pending-logout');
   if (!logoutBtn) {
     logoutBtn = document.createElement('button');
     logoutBtn.className = 'pending-logout';
     logoutBtn.textContent = 'Logout';
-    logoutBtn.style.cssText = 'margin-top:20px;background:none;border:1px solid var(--medium-gray);color:var(--text-muted);padding:10px 24px;border-radius:8px;cursor:pointer;font-size:14px;';
+    logoutBtn.style.cssText = 'margin-top:12px;background:none;border:1px solid var(--medium-gray);color:var(--text-muted);padding:10px 24px;border-radius:8px;cursor:pointer;font-size:14px;';
     logoutBtn.onclick = logout;
     groupScreen.appendChild(logoutBtn);
   }
