@@ -225,7 +225,7 @@
     width: 100%; padding: 12px 14px; border-radius: 10px;
     border: 1px solid #333; background: rgba(0,0,0,0.4);
     color: var(--text); font-family: 'Source Sans 3', sans-serif;
-    font-size: 14px; margin-bottom: 10px; outline: none;
+    font-size: 16px; margin-bottom: 10px; outline: none;
     transition: border-color 0.2s;
   }
   .login-input:focus { border-color: var(--primary); }
@@ -1783,8 +1783,23 @@ async function googleSignIn() {
 }
 
 function toggleEmailForm() {
-  document.getElementById('emailForm').classList.toggle('show');
+  const form = document.getElementById('emailForm');
+  form.classList.toggle('show');
+  if (form.classList.contains('show')) {
+    setTimeout(() => {
+      document.getElementById('loginEmail').focus();
+    }, 100);
+  }
 }
+
+// Scroll focused login inputs into view when iOS keyboard opens
+document.addEventListener('focusin', function(e) {
+  if (e.target.closest('#emailForm')) {
+    setTimeout(() => {
+      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  }
+});
 
 function emailSignIn() {
   const email = document.getElementById('loginEmail').value.trim();
