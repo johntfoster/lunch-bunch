@@ -22,48 +22,51 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Groups: restricted to managers and members
+    // Groups: readable by any authenticated user (needed for group discovery/switching)
+    // Write operations restricted to managers
     match /groups/{groupId} {
-      allow read: if request.auth != null && isGroupUser(groupId);
+      allow read: if request.auth != null;
       allow create: if request.auth != null;
       allow update, delete: if request.auth != null && isManager(groupId);
 
-      // Members subcollection
+      // Members subcollection: readable by any authenticated user (needed for membership checks)
+      // Write restricted: create open (for joining), delete by self or manager
       match /members/{memberId} {
-        allow read: if request.auth != null && isGroupUser(groupId);
+        allow read: if request.auth != null;
         allow create: if request.auth != null;
         allow delete: if request.auth != null && (request.auth.uid == memberId || isManager(groupId));
       }
 
-      // Pending members subcollection
+      // Pending members: only managers can read/delete, anyone can request to join
       match /pendingMembers/{memberId} {
         allow read: if request.auth != null && isManager(groupId);
         allow create: if request.auth != null;
         allow delete: if request.auth != null && isManager(groupId);
       }
 
-      // Votes document
+      // Votes: readable by any authenticated user, writable by members only
       match /votes/{dateId} {
-        allow read: if request.auth != null && isGroupUser(groupId);
+        allow read: if request.auth != null;
         allow write: if request.auth != null && isGroupUser(groupId);
 
-        // Ballots subcollection
+        // Ballots: one vote per user per day, must be a member
         match /ballots/{userId} {
-          allow read: if request.auth != null && isGroupUser(groupId);
-          allow create: if request.auth != null && request.auth.uid == userId && isMember(groupId) && !exists(/databases/$(database)/documents/groups/$(groupId)/votes/$(dateId)/ballots/$(userId));
-          allow update, delete: if false;
+          allow read: if request.auth != null;
+          allow create: if request.auth != null && request.auth.uid == userId && isMember(groupId);
+          allow update: if request.auth != null && request.auth.uid == userId && isMember(groupId);
+          allow delete: if false;
         }
 
-        // Daily extras subcollection
+        // Daily extras: readable by anyone, writable by members
         match /extras/{extraId} {
-          allow read: if request.auth != null && isGroupUser(groupId);
+          allow read: if request.auth != null;
           allow write: if request.auth != null && isGroupUser(groupId);
         }
       }
 
-      // History: readable by group users, writable only by group users
+      // History: readable by any authenticated user, writable by members
       match /history/{dateId} {
-        allow read: if request.auth != null && isGroupUser(groupId);
+        allow read: if request.auth != null;
         allow create: if request.auth != null && isGroupUser(groupId);
         allow update, delete: if false;
       }

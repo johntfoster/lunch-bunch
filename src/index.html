@@ -3029,39 +3029,9 @@ function createFuzzyDropdown(container, options, onSelect, placeholder, opts) {
 let allGroupsCache = [];
 
 async function loadAllGroups() {
-  const groupIds = new Set();
-
-  // 1. Get groups where user is a manager
-  const managerSnap = await db.collection('groups')
-    .where('managers', 'array-contains', currentUser.email)
-    .get();
-  managerSnap.forEach(doc => {
-    groupIds.add(doc.id);
-  });
-
-  // 2. Check user's current selectedGroup if it exists
-  const userDoc = await db.collection('users').doc(currentUser.uid).get();
-  const savedGroup = userDoc.data()?.selectedGroup;
-  if (savedGroup) {
-    try {
-      // Try to read it to verify access
-      const groupDoc = await db.collection('groups').doc(savedGroup).get();
-      if (groupDoc.exists) {
-        groupIds.add(savedGroup);
-      }
-    } catch (e) {
-      // Permission denied - not a member anymore, ignore
-    }
-  }
-
-  // Fetch full group docs for all discovered groups
-  const groupDocs = await Promise.all(
-    Array.from(groupIds).map(id => db.collection('groups').doc(id).get())
-  );
-
+  const snapshot = await db.collection('groups').get();
   allGroupsCache = [];
-  groupDocs.forEach(doc => {
-    if (!doc.exists) return;
+  snapshot.forEach(doc => {
     const data = doc.data();
     const isFrozen = data.status === 'frozen';
     const label = (data.name || doc.id) + (isFrozen ? ' (Inactive)' : '');
