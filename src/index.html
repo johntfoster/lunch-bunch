@@ -1906,23 +1906,34 @@ auth.onAuthStateChanged(async user => {
 
     if (savedGroup) {
       currentGroup = savedGroup;
-      // Verify membership (manager or approved member)
-      const groupDoc = await db.collection('groups').doc(savedGroup).get();
-      const managers = groupDoc.exists ? (groupDoc.data().managers || []) : [];
-      const memberDoc = await db.collection('groups').doc(savedGroup).collection('members').doc(user.uid).get();
-      if (managers.includes(user.email) || memberDoc.exists) {
-        loadVotingScreen();
-      } else {
-        // Check if pending
-        const pendingDoc = await db.collection('groups').doc(savedGroup).collection('pendingMembers').doc(user.uid).get();
-        if (pendingDoc.exists) {
-          currentGroup = savedGroup;
-          navigateToScreen('groupScreen');
-          showPendingState();
+      try {
+        // Verify membership (manager or approved member)
+        const groupDoc = await db.collection('groups').doc(savedGroup).get();
+        const managers = groupDoc.exists ? (groupDoc.data().managers || []) : [];
+        const memberDoc = await db.collection('groups').doc(savedGroup).collection('members').doc(user.uid).get();
+        if (managers.includes(user.email) || memberDoc.exists) {
+          loadVotingScreen();
         } else {
-          navigateToScreen('groupScreen');
-          initGroupSelectScreen();
+          // Check if pending
+          const pendingDoc = await db.collection('groups').doc(savedGroup).collection('pendingMembers').doc(user.uid).get();
+          if (pendingDoc.exists) {
+            currentGroup = savedGroup;
+            navigateToScreen('groupScreen');
+            showPendingState();
+          } else {
+            // Not a member anymore, clear savedGroup
+            await userRef.update({ selectedGroup: firebase.firestore.FieldValue.delete() });
+            navigateToScreen('groupScreen');
+            initGroupSelectScreen();
+          }
         }
+      } catch (error) {
+        // Permission denied - user not a member of this group (or group deleted)
+        console.log('[Auth] Saved group inaccessible:', error.code);
+        await userRef.update({ selectedGroup: firebase.firestore.FieldValue.delete() });
+        currentGroup = null;
+        navigateToScreen('groupScreen');
+        initGroupSelectScreen();
       }
     } else {
       navigateToScreen('groupScreen');
