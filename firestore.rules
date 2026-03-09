@@ -2,9 +2,19 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper to check if user is a group manager
+    // Helper: check if user is a group manager (email in managers array)
     function isManager(groupId) {
       return request.auth.token.email in get(/databases/$(database)/documents/groups/$(groupId)).data.managers;
+    }
+
+    // Helper: check if user is a group member (member doc exists)
+    function isMember(groupId) {
+      return exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
+    }
+
+    // Helper: user is manager or member of the group
+    function isGroupUser(groupId) {
+      return isManager(groupId) || isMember(groupId);
     }
 
     // Users can only read/write their own document
@@ -12,15 +22,15 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Groups: read by any authenticated user, write restricted
+    // Groups: restricted to managers and members
     match /groups/{groupId} {
-      allow read: if request.auth != null;
+      allow read: if request.auth != null && isGroupUser(groupId);
       allow create: if request.auth != null;
       allow update, delete: if request.auth != null && isManager(groupId);
 
       // Members subcollection
       match /members/{memberId} {
-        allow read: if request.auth != null;
+        allow read: if request.auth != null && isGroupUser(groupId);
         allow create: if request.auth != null;
         allow delete: if request.auth != null && (request.auth.uid == memberId || isManager(groupId));
       }
@@ -34,25 +44,27 @@ service cloud.firestore {
 
       // Votes document
       match /votes/{dateId} {
-        allow read, write: if request.auth != null;
+        allow read: if request.auth != null && isGroupUser(groupId);
+        allow write: if request.auth != null && isGroupUser(groupId);
 
         // Ballots subcollection
         match /ballots/{userId} {
-          allow read: if request.auth != null;
-          allow create: if request.auth != null && request.auth.uid == userId && !exists(/databases/$(database)/documents/groups/$(groupId)/votes/$(dateId)/ballots/$(userId));
+          allow read: if request.auth != null && isGroupUser(groupId);
+          allow create: if request.auth != null && request.auth.uid == userId && isMember(groupId) && !exists(/databases/$(database)/documents/groups/$(groupId)/votes/$(dateId)/ballots/$(userId));
           allow update, delete: if false;
         }
 
         // Daily extras subcollection
         match /extras/{extraId} {
-          allow read, write: if request.auth != null;
+          allow read: if request.auth != null && isGroupUser(groupId);
+          allow write: if request.auth != null && isGroupUser(groupId);
         }
       }
 
-      // History is read-only for users (written by client when voting closes)
+      // History: readable by group users, writable only by group users
       match /history/{dateId} {
-        allow read: if request.auth != null;
-        allow create: if request.auth != null;
+        allow read: if request.auth != null && isGroupUser(groupId);
+        allow create: if request.auth != null && isGroupUser(groupId);
         allow update, delete: if false;
       }
 
