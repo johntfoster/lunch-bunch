@@ -3007,9 +3007,34 @@ function createFuzzyDropdown(container, options, onSelect, placeholder, opts) {
 let allGroupsCache = [];
 
 async function loadAllGroups() {
-  const snapshot = await db.collection('groups').get();
+  // Query groups where user is a member (subcollection) or a manager (array field)
+  const groupIds = new Set();
+
+  // 1. Groups where user is in the members subcollection
+  const memberSnap = await db.collectionGroup('members')
+    .where(firebase.firestore.FieldPath.documentId(), '==', currentUser.uid)
+    .get();
+  memberSnap.forEach(doc => {
+    // path: groups/{groupId}/members/{uid}
+    groupIds.add(doc.ref.parent.parent.id);
+  });
+
+  // 2. Groups where user's email is in the managers array
+  const managerSnap = await db.collection('groups')
+    .where('managers', 'array-contains', currentUser.email)
+    .get();
+  managerSnap.forEach(doc => {
+    groupIds.add(doc.id);
+  });
+
+  // Fetch full group docs for all discovered groups
+  const groupDocs = await Promise.all(
+    Array.from(groupIds).map(id => db.collection('groups').doc(id).get())
+  );
+
   allGroupsCache = [];
-  snapshot.forEach(doc => {
+  groupDocs.forEach(doc => {
+    if (!doc.exists) return;
     const data = doc.data();
     const isFrozen = data.status === 'frozen';
     const label = (data.name || doc.id) + (isFrozen ? ' (Inactive)' : '');
