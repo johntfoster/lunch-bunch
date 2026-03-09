@@ -396,6 +396,59 @@ describe('Cloud Functions Test Suite', () => {
         expect(recipientsMonday).toHaveLength(1);
       });
 
+      test('handles group with no managers field', async () => {
+        const { getGroupNotifRecipients } = require('../index');
+        
+        mockDb.setDocument('groups/group1', { name: 'Test' }); // no managers field
+        mockDb.setDocument('groups/group1/members/user1', {});
+        mockDb.setDocument('users/user1', {
+          fcmToken: 'token1',
+          notificationPrefs: { reminder: true },
+        });
+
+        const recipients = await getGroupNotifRecipients('group1', 'reminder');
+        expect(recipients).toHaveLength(1);
+      });
+
+      test('handles non-existent group doc', async () => {
+        const { getGroupNotifRecipients } = require('../index');
+        
+        // group doc doesn't exist but members subcollection does
+        mockDb.setDocument('groups/group1/members/user1', {});
+        mockDb.setDocument('users/user1', {
+          fcmToken: 'token1',
+          notificationPrefs: { reminder: true },
+        });
+
+        const recipients = await getGroupNotifRecipients('group1', 'reminder');
+        expect(recipients).toHaveLength(1);
+      });
+
+      test('handles user with no notificationPrefs', async () => {
+        const { getGroupNotifRecipients } = require('../index');
+        
+        mockDb.setDocument('groups/group1', { managers: [] });
+        mockDb.setDocument('groups/group1/members/user1', {});
+        mockDb.setDocument('users/user1', {
+          fcmToken: 'token1',
+          // no notificationPrefs
+        });
+
+        const recipients = await getGroupNotifRecipients('group1', 'reminder');
+        expect(recipients).toHaveLength(0);
+      });
+
+      test('handles non-existent user doc', async () => {
+        const { getGroupNotifRecipients } = require('../index');
+        
+        mockDb.setDocument('groups/group1', { managers: [] });
+        mockDb.setDocument('groups/group1/members/user1', {});
+        // user1 doc doesn't exist
+
+        const recipients = await getGroupNotifRecipients('group1', 'reminder');
+        expect(recipients).toHaveLength(0);
+      });
+
       test('uses default notifDays when not specified', async () => {
         const { getGroupNotifRecipients } = require('../index');
         
@@ -425,6 +478,16 @@ describe('Cloud Functions Test Suite', () => {
         
         expect(mockMessaging.sendEachForMulticast).not.toHaveBeenCalled();
         expect(console.log).toHaveBeenCalledWith('[FCM] No tokens to send to');
+      });
+
+      test('handles null/undefined tokens gracefully', async () => {
+        const { sendFcmNotifications } = require('../index');
+        
+        await sendFcmNotifications(null, 'Title', 'Body');
+        expect(mockMessaging.sendEachForMulticast).not.toHaveBeenCalled();
+        
+        await sendFcmNotifications(undefined, 'Title', 'Body');
+        expect(mockMessaging.sendEachForMulticast).not.toHaveBeenCalled();
       });
 
       test('sends notifications with correct format', async () => {
@@ -532,6 +595,69 @@ describe('Cloud Functions Test Suite', () => {
         },
         data: {},
       });
+    });
+
+    test('uses groupId as name fallback when group has no name', async () => {
+      const event = {
+        params: { groupId: 'group-abc', userId: 'user1' },
+        data: {
+          data: () => ({ displayName: 'Someone' }),
+        },
+      };
+
+      mockDb.setDocument('groups/group-abc', {
+        // no name field
+        managers: ['mgr@test.com'],
+      });
+      mockDb.setDocument('users/mgr-uid', {
+        email: 'mgr@test.com',
+        fcmToken: 'tok',
+      });
+      mockMessaging.sendEachForMulticast.mockResolvedValue({ successCount: 1, failureCount: 0 });
+
+      await functions.onPendingMemberCreated(event);
+
+      expect(mockMessaging.sendEachForMulticast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notification: expect.objectContaining({
+            body: 'Someone wants to join group-abc',
+          }),
+        })
+      );
+    });
+
+    test('handles group with no managers field (undefined)', async () => {
+      const event = {
+        params: { groupId: 'group1', userId: 'user1' },
+        data: {
+          data: () => ({ displayName: 'Test' }),
+        },
+      };
+
+      mockDb.setDocument('groups/group1', { name: 'Test Group' }); // no managers field
+
+      await functions.onPendingMemberCreated(event);
+
+      expect(console.log).toHaveBeenCalledWith('No managers to notify for group:', 'group1');
+    });
+
+    test('handles manager user not found in users collection', async () => {
+      const event = {
+        params: { groupId: 'group1', userId: 'user1' },
+        data: {
+          data: () => ({ displayName: 'Test' }),
+        },
+      };
+
+      mockDb.setDocument('groups/group1', {
+        name: 'Test Group',
+        managers: ['nobody@example.com'],
+      });
+      // No user docs matching this email
+
+      await functions.onPendingMemberCreated(event);
+
+      expect(console.log).toHaveBeenCalledWith('No FCM tokens found for managers');
     });
 
     test('handles group not found', async () => {
@@ -791,173 +917,497 @@ describe('Cloud Functions Test Suite', () => {
         })
       );
     });
+
+    test('uses groupId as fallback when group has no name', async () => {
+      const event = {
+        params: { groupId: 'group-xyz', userId: 'user1' },
+        data: { data: () => ({}) },
+      };
+
+      mockDb.setDocument('groups/group-xyz', {
+        // no name field
+        managers: [],
+      });
+      mockDb.setDocument('users/user1', {
+        fcmToken: 'tok',
+      });
+
+      mockMessaging.sendEachForMulticast.mockResolvedValue({ successCount: 1, failureCount: 0 });
+
+      await functions.onMemberApproved(event);
+
+      expect(mockMessaging.sendEachForMulticast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notification: expect.objectContaining({
+            body: "You've been approved to join group-xyz",
+          }),
+        })
+      );
+    });
   });
 
   // ===== sendVotingReminders TESTS =====
 
   describe('sendVotingReminders', () => {
+    /**
+     * Helper: mock Date so getCSTTimeString/getCSTDateString/getCSTDayOfWeek
+     * return predictable values. We override toLocaleTimeString, toLocaleDateString,
+     * and getDay on the Date prototype.
+     */
+    function mockTimeForScheduled(timeStr, dateStr, jsDay) {
+      const RealDate = global._RealDate || Date;
+      global._RealDate = RealDate;
+      
+      const mockDate = new RealDate('2026-03-09T17:00:00Z');
+      // Override toLocaleTimeString to return our time
+      jest.spyOn(RealDate.prototype, 'toLocaleTimeString').mockReturnValue(timeStr);
+      // Override toLocaleDateString to return our date in MM/DD/YYYY format (gets reformatted)
+      const [y, m, d] = dateStr.split('-');
+      jest.spyOn(RealDate.prototype, 'toLocaleDateString').mockReturnValue(`${m}/${d}/${y}`);
+      // Override getDay for getCSTDayOfWeek
+      jest.spyOn(RealDate.prototype, 'getDay').mockReturnValue(jsDay);
+      
+      jest.spyOn(global, 'Date').mockImplementation((...args) => {
+        if (args.length === 0) return mockDate;
+        return new RealDate(...args);
+      });
+      global.Date.now = RealDate.now;
+    }
+
     test('runs without errors and logs checking message', async () => {
-      // Time-based logic is tested via helper functions and integration
       await functions.sendVotingReminders();
       
-      // Should at least log that it's checking
       expect(console.log).toHaveBeenCalledWith(
         expect.stringContaining('[Reminders] Checking at')
       );
     });
 
-    test('processes groups without errors', async () => {
+    test('skips group when time does not match reminder time', async () => {
+      mockTimeForScheduled('09:00', '2026-03-09', 1); // Monday 09:00
+      
+      mockDb.setDocument('groups/group1', {
+        name: 'Test Group',
+        settings: { votingCloseTime: '11:50' }, // reminder at 10:50, not 09:00
+        managers: [],
+      });
+
+      await functions.sendVotingReminders();
+
+      expect(mockMessaging.sendEachForMulticast).not.toHaveBeenCalled();
+    });
+
+    test('sends reminders when time matches and skips if already sent', async () => {
+      mockTimeForScheduled('10:50', '2026-03-09', 1); // Monday, reminder time for 11:50 close
+      
       mockDb.setDocument('groups/group1', {
         name: 'Test Group',
         settings: { votingCloseTime: '11:50' },
         managers: [],
       });
+      // Already sent today
+      mockDb.setDocument('groups/group1/notificationLog/2026-03-09', {
+        reminderSentAt: new Date(),
+        reminderCloseTime: '11:50',
+      });
+
+      await functions.sendVotingReminders();
+
+      expect(console.log).toHaveBeenCalledWith(
+        expect.stringContaining('Already sent for group group1')
+      );
+      expect(mockMessaging.sendEachForMulticast).not.toHaveBeenCalled();
+    });
+
+    test('marks as sent even when no opted-in users', async () => {
+      mockTimeForScheduled('10:50', '2026-03-09', 1);
       
-      // Should complete without throwing
-      await expect(functions.sendVotingReminders()).resolves.not.toThrow();
+      mockDb.setDocument('groups/group1', {
+        name: 'Test Group',
+        settings: { votingCloseTime: '11:50' },
+        managers: [],
+      });
+      // No members at all
+
+      await functions.sendVotingReminders();
+
+      expect(console.log).toHaveBeenCalledWith(
+        expect.stringContaining('No opted-in users for group group1')
+      );
+      // Should still mark as sent
+      const writes = mockDb.getWrites();
+      const logWrite = writes.find(w => w.path.includes('notificationLog'));
+      expect(logWrite).toBeDefined();
+    });
+
+    test('sends reminder notification to opted-in users', async () => {
+      mockTimeForScheduled('10:50', '2026-03-09', 1); // Monday
+      
+      mockDb.setDocument('groups/group1', {
+        name: 'Lunch Crew',
+        settings: { votingCloseTime: '11:50' },
+        managers: [],
+      });
+      mockDb.setDocument('groups/group1/members/user1', {});
+      mockDb.setDocument('users/user1', {
+        fcmToken: 'token1',
+        notificationPrefs: { reminder: true },
+        notifDays: [1, 2, 3, 4, 5],
+      });
+
+      mockMessaging.sendEachForMulticast.mockResolvedValue({
+        successCount: 1,
+        failureCount: 0,
+      });
+
+      await functions.sendVotingReminders();
+
+      expect(mockMessaging.sendEachForMulticast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tokens: ['token1'],
+          notification: expect.objectContaining({
+            title: '🍽️ Vote before it\'s too late!',
+          }),
+          data: { type: 'reminder', groupId: 'group1' },
+        })
+      );
+      expect(console.log).toHaveBeenCalledWith(
+        expect.stringContaining('Sent to 1 users for group group1')
+      );
+    });
+
+    test('formats PM close time correctly', async () => {
+      mockTimeForScheduled('12:50', '2026-03-09', 1);
+      
+      mockDb.setDocument('groups/group1', {
+        name: 'Test',
+        settings: { votingCloseTime: '13:50' }, // 1:50 PM
+        managers: [],
+      });
+      mockDb.setDocument('groups/group1/members/user1', {});
+      mockDb.setDocument('users/user1', {
+        fcmToken: 'token1',
+        notificationPrefs: { reminder: true },
+        notifDays: [1],
+      });
+
+      mockMessaging.sendEachForMulticast.mockResolvedValue({ successCount: 1, failureCount: 0 });
+
+      await functions.sendVotingReminders();
+
+      expect(mockMessaging.sendEachForMulticast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notification: expect.objectContaining({
+            body: expect.stringContaining('1:50 PM'),
+          }),
+        })
+      );
+    });
+
+    test('formats midnight close time correctly (12:00 AM)', async () => {
+      mockTimeForScheduled('23:00', '2026-03-09', 1);
+      
+      mockDb.setDocument('groups/group1', {
+        name: 'Test',
+        settings: { votingCloseTime: '00:00' }, // midnight
+        managers: [],
+      });
+      mockDb.setDocument('groups/group1/members/user1', {});
+      mockDb.setDocument('users/user1', {
+        fcmToken: 'token1',
+        notificationPrefs: { reminder: true },
+        notifDays: [1],
+      });
+
+      mockMessaging.sendEachForMulticast.mockResolvedValue({ successCount: 1, failureCount: 0 });
+
+      await functions.sendVotingReminders();
+
+      expect(mockMessaging.sendEachForMulticast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notification: expect.objectContaining({
+            body: expect.stringContaining('12:00 AM'),
+          }),
+        })
+      );
+    });
+
+    test('uses default votingCloseTime when settings missing', async () => {
+      mockTimeForScheduled('10:50', '2026-03-09', 1);
+      
+      mockDb.setDocument('groups/group1', {
+        name: 'Test',
+        // No settings at all - defaults to votingCloseTime '11:50', reminder at 10:50
+        managers: [],
+      });
+      mockDb.setDocument('groups/group1/members/user1', {});
+      mockDb.setDocument('users/user1', {
+        fcmToken: 'token1',
+        notificationPrefs: { reminder: true },
+        notifDays: [1],
+      });
+
+      mockMessaging.sendEachForMulticast.mockResolvedValue({ successCount: 1, failureCount: 0 });
+
+      await functions.sendVotingReminders();
+
+      expect(mockMessaging.sendEachForMulticast).toHaveBeenCalled();
     });
   });
 
   // ===== sendWinnerAnnouncements TESTS =====
 
   describe('sendWinnerAnnouncements', () => {
+    function mockTimeForScheduled(timeStr, dateStr, jsDay) {
+      const RealDate = global._RealDate || Date;
+      global._RealDate = RealDate;
+      
+      const mockDate = new RealDate('2026-03-09T17:00:00Z');
+      jest.spyOn(RealDate.prototype, 'toLocaleTimeString').mockReturnValue(timeStr);
+      const [y, m, d] = dateStr.split('-');
+      jest.spyOn(RealDate.prototype, 'toLocaleDateString').mockReturnValue(`${m}/${d}/${y}`);
+      jest.spyOn(RealDate.prototype, 'getDay').mockReturnValue(jsDay);
+      
+      jest.spyOn(global, 'Date').mockImplementation((...args) => {
+        if (args.length === 0) return mockDate;
+        return new RealDate(...args);
+      });
+      global.Date.now = RealDate.now;
+    }
+
     test('runs without errors and logs checking message', async () => {
-      // Time-based logic is tested via helper functions and integration
       await functions.sendWinnerAnnouncements();
       
-      // Should at least log that it's checking
       expect(console.log).toHaveBeenCalledWith(
         expect.stringContaining('[Winners] Checking at')
       );
     });
 
-    test('processes groups with votes without errors', async () => {
-      const today = functions.getCSTDateString();
+    test('skips group when time does not match close time', async () => {
+      mockTimeForScheduled('09:00', '2026-03-09', 1);
       
       mockDb.setDocument('groups/group1', {
         name: 'Test Group',
         settings: { votingCloseTime: '11:50' },
         managers: [],
-      });
-      mockDb.setDocument(`groups/group1/votes/${today}/ballots/user1`, {
-        restaurantName: 'Pizza Place',
-      });
-      
-      // Should complete without throwing
-      await expect(functions.sendWinnerAnnouncements()).resolves.not.toThrow();
-    });
-    
-    test('respects notifDays via getGroupNotifRecipients', async () => {
-      // This is tested via the getGroupNotifRecipients helper tests
-      // The integration is verified by the function running without errors
-      mockDb.setDocument('groups/group1', {
-        name: 'Test Group',
-        settings: { votingCloseTime: '11:50' },
-        managers: [],
-      });
-
-      await expect(functions.sendWinnerAnnouncements()).resolves.not.toThrow();
-    });
-
-    test('auto-promotes winning daily extra to permanent list', async () => {
-      const today = functions.getCSTDateString();
-      const currentTime = functions.getCSTTimeString();
-      
-      mockDb.setDocument('groups/group1', {
-        name: 'Test Group',
-        settings: { votingCloseTime: currentTime },
-        restaurants: [
-          { id: 'pizza-place', name: 'Pizza Place' }
-        ],
-        managers: ['manager@example.com'],
-      });
-
-      // Votes for a daily extra "Taco Shack" that's NOT in permanent list
-      mockDb.setDocument(`groups/group1/votes/${today}/ballots/user1`, {
-        restaurantName: 'Taco Shack',
-      });
-      mockDb.setDocument(`groups/group1/votes/${today}/ballots/user2`, {
-        restaurantName: 'Taco Shack',
-      });
-
-      mockDb.setDocument('users/user1', {
-        email: 'user1@example.com',
-        fcmToken: 'token1',
-        notificationPrefs: { winner: true },
-        notifDays: [1, 2, 3, 4, 5, 6, 7],
-      });
-      mockDb.setDocument('groups/group1/members/user1', {
-        email: 'user1@example.com',
-      });
-
-      mockMessaging.sendEachForMulticast.mockResolvedValue({
-        successCount: 1,
-        failureCount: 0,
       });
 
       await functions.sendWinnerAnnouncements();
 
-      // Verify Taco Shack was added to permanent list via arrayUnion
-      const groupUpdate = mockDb.getWrites().find(
-        w => w.path === 'groups/group1' && 
-        w.type === 'update' && 
-        w.data.restaurants
-      );
+      expect(mockMessaging.sendEachForMulticast).not.toHaveBeenCalled();
+    });
 
+    test('skips if winner already sent today', async () => {
+      mockTimeForScheduled('11:50', '2026-03-09', 1);
+      
+      mockDb.setDocument('groups/group1', {
+        name: 'Test Group',
+        settings: { votingCloseTime: '11:50' },
+        managers: [],
+      });
+      mockDb.setDocument('groups/group1/notificationLog/2026-03-09', {
+        winnerSentAt: new Date(),
+        winnerCloseTime: '11:50',
+      });
+
+      await functions.sendWinnerAnnouncements();
+
+      expect(console.log).toHaveBeenCalledWith(
+        expect.stringContaining('Already sent for group group1')
+      );
+    });
+
+    test('handles no votes for today', async () => {
+      mockTimeForScheduled('11:50', '2026-03-09', 1);
+      
+      mockDb.setDocument('groups/group1', {
+        name: 'Test Group',
+        settings: { votingCloseTime: '11:50' },
+        managers: [],
+      });
+      // No ballots
+
+      await functions.sendWinnerAnnouncements();
+
+      expect(console.log).toHaveBeenCalledWith(
+        expect.stringContaining('No votes for group group1')
+      );
+    });
+
+    test('handles ballots with no restaurantName (empty tally)', async () => {
+      mockTimeForScheduled('11:50', '2026-03-09', 1);
+      
+      mockDb.setDocument('groups/group1', {
+        name: 'Test Group',
+        settings: { votingCloseTime: '11:50' },
+        managers: [],
+      });
+      mockDb.setDocument('groups/group1/votes/2026-03-09/ballots/user1', {
+        // no restaurantName
+      });
+
+      await functions.sendWinnerAnnouncements();
+
+      expect(console.log).toHaveBeenCalledWith(
+        expect.stringContaining('Empty tally for group group1')
+      );
+    });
+
+    test('sends winner notification and auto-promotes new restaurant', async () => {
+      mockTimeForScheduled('11:50', '2026-03-09', 1);
+      jest.spyOn(Math, 'random').mockReturnValue(0);
+      
+      mockDb.setDocument('groups/group1', {
+        name: 'Lunch Crew',
+        settings: { votingCloseTime: '11:50' },
+        restaurants: [{ id: 'pizza-place', name: 'Pizza Place' }],
+        managers: [],
+      });
+      mockDb.setDocument('groups/group1/votes/2026-03-09/ballots/user1', {
+        restaurantName: 'Taco Shack',
+      });
+      mockDb.setDocument('groups/group1/votes/2026-03-09/ballots/user2', {
+        restaurantName: 'Taco Shack',
+      });
+      mockDb.setDocument('groups/group1/members/user1', {});
+      mockDb.setDocument('users/user1', {
+        fcmToken: 'token1',
+        notificationPrefs: { winner: true },
+        notifDays: [1, 2, 3, 4, 5, 6, 7],
+      });
+
+      mockMessaging.sendEachForMulticast.mockResolvedValue({ successCount: 1, failureCount: 0 });
+
+      await functions.sendWinnerAnnouncements();
+
+      // Check auto-promotion
+      const groupUpdate = mockDb.getWrites().find(
+        w => w.path === 'groups/group1' && w.type === 'update' && w.data.restaurants
+      );
       expect(groupUpdate).toBeDefined();
       expect(groupUpdate.data.restaurants).toEqual({
-        _arrayUnion: [
-          {
-            id: 'taco-shack',
-            name: 'Taco Shack'
-          }
-        ]
+        _arrayUnion: [{ id: 'taco-shack', name: 'Taco Shack' }]
       });
+
+      // Check notification
+      expect(mockMessaging.sendEachForMulticast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notification: expect.objectContaining({
+            title: '🏆 Today\'s winner: Taco Shack!',
+          }),
+          data: { type: 'winner', groupId: 'group1', winner: 'Taco Shack' },
+        })
+      );
     });
 
     test('does not duplicate restaurant if winner already in permanent list', async () => {
-      const today = functions.getCSTDateString();
-      const currentTime = functions.getCSTTimeString();
+      mockTimeForScheduled('11:50', '2026-03-09', 1);
+      jest.spyOn(Math, 'random').mockReturnValue(0);
       
       mockDb.setDocument('groups/group1', {
         name: 'Test Group',
-        settings: { votingCloseTime: currentTime },
-        restaurants: [
-          { id: 'pizza-place', name: 'Pizza Place' }
-        ],
-        managers: ['manager@example.com'],
+        settings: { votingCloseTime: '11:50' },
+        restaurants: [{ id: 'pizza-place', name: 'Pizza Place' }],
+        managers: [],
       });
-
-      // Votes for Pizza Place which IS in permanent list
-      mockDb.setDocument(`groups/group1/votes/${today}/ballots/user1`, {
+      mockDb.setDocument('groups/group1/votes/2026-03-09/ballots/user1', {
         restaurantName: 'Pizza Place',
       });
-
+      mockDb.setDocument('groups/group1/members/user1', {});
       mockDb.setDocument('users/user1', {
-        email: 'user1@example.com',
         fcmToken: 'token1',
         notificationPrefs: { winner: true },
         notifDays: [1, 2, 3, 4, 5, 6, 7],
       });
-      mockDb.setDocument('groups/group1/members/user1', {
-        email: 'user1@example.com',
-      });
 
-      mockMessaging.sendEachForMulticast.mockResolvedValue({
-        successCount: 1,
-        failureCount: 0,
-      });
+      mockMessaging.sendEachForMulticast.mockResolvedValue({ successCount: 1, failureCount: 0 });
 
       await functions.sendWinnerAnnouncements();
 
-      // Verify no restaurant update (Pizza Place already permanent)
       const restaurantUpdate = mockDb.getWrites().find(
-        w => w.path === 'groups/group1' && 
-        w.type === 'update' && 
-        w.data.restaurants
+        w => w.path === 'groups/group1' && w.type === 'update' && w.data.restaurants
       );
-
       expect(restaurantUpdate).toBeUndefined();
+    });
+
+    test('handles no opted-in users for winner notifications', async () => {
+      mockTimeForScheduled('11:50', '2026-03-09', 1);
+      jest.spyOn(Math, 'random').mockReturnValue(0);
+      
+      mockDb.setDocument('groups/group1', {
+        name: 'Test Group',
+        settings: { votingCloseTime: '11:50' },
+        restaurants: [],
+        managers: [],
+      });
+      mockDb.setDocument('groups/group1/votes/2026-03-09/ballots/user1', {
+        restaurantName: 'Burgers',
+      });
+      // No members with winner pref enabled
+
+      await functions.sendWinnerAnnouncements();
+
+      expect(console.log).toHaveBeenCalledWith(
+        expect.stringContaining('No opted-in users for group group1')
+      );
+      expect(mockMessaging.sendEachForMulticast).not.toHaveBeenCalled();
+    });
+
+    test('handles tie-breaking with random', async () => {
+      mockTimeForScheduled('11:50', '2026-03-09', 1);
+      jest.spyOn(Math, 'random').mockReturnValue(0.99); // pick last tied entry
+      
+      mockDb.setDocument('groups/group1', {
+        name: 'Test',
+        settings: { votingCloseTime: '11:50' },
+        restaurants: [],
+        managers: [],
+      });
+      mockDb.setDocument('groups/group1/votes/2026-03-09/ballots/user1', {
+        restaurantName: 'Place A',
+      });
+      mockDb.setDocument('groups/group1/votes/2026-03-09/ballots/user2', {
+        restaurantName: 'Place B',
+      });
+      mockDb.setDocument('groups/group1/members/user1', {});
+      mockDb.setDocument('users/user1', {
+        fcmToken: 'token1',
+        notificationPrefs: { winner: true },
+        notifDays: [1],
+      });
+
+      mockMessaging.sendEachForMulticast.mockResolvedValue({ successCount: 1, failureCount: 0 });
+
+      await functions.sendWinnerAnnouncements();
+
+      // With random=0.99 and 2 tied entries, should pick the second one
+      expect(mockMessaging.sendEachForMulticast).toHaveBeenCalled();
+    });
+
+    test('uses default votingCloseTime when settings missing', async () => {
+      mockTimeForScheduled('11:50', '2026-03-09', 1);
+      jest.spyOn(Math, 'random').mockReturnValue(0);
+      
+      mockDb.setDocument('groups/group1', {
+        name: 'Test',
+        // No settings - defaults to votingCloseTime '11:50'
+        managers: [],
+        restaurants: [],
+      });
+      mockDb.setDocument('groups/group1/votes/2026-03-09/ballots/user1', {
+        restaurantName: 'Tacos',
+      });
+      mockDb.setDocument('groups/group1/members/user1', {});
+      mockDb.setDocument('users/user1', {
+        fcmToken: 'token1',
+        notificationPrefs: { winner: true },
+        notifDays: [1],
+      });
+
+      mockMessaging.sendEachForMulticast.mockResolvedValue({ successCount: 1, failureCount: 0 });
+
+      await functions.sendWinnerAnnouncements();
+
+      expect(mockMessaging.sendEachForMulticast).toHaveBeenCalled();
     });
   });
 
@@ -1387,10 +1837,16 @@ describe('Cloud Functions Test Suite', () => {
     });
 
     test('skips warning if already sent', async () => {
-      const now = new Date('2026-03-07T12:00:00Z');
-      jest.spyOn(global, 'Date').mockImplementation(() => now);
+      const RealDate = Date;
+      const now = new RealDate('2026-03-07T12:00:00Z');
+      const sixDaysFromNow = new RealDate('2026-03-13T12:00:00Z');
+      const sevenDaysFromNow = new RealDate('2026-03-14T12:00:00Z');
 
-      const sixDaysFromNow = new Date('2026-03-13T12:00:00Z');
+      global.Date = jest.fn((...args) => {
+        if (args.length === 0) return now;
+        return new RealDate(...args);
+      });
+      global.Date.now = () => now.getTime();
 
       mockDb.setDocument('groups/group1', {
         name: 'Warning Group',
@@ -1403,13 +1859,67 @@ describe('Cloud Functions Test Suite', () => {
       await functions.cleanupFrozenGroups();
 
       expect(mockMessaging.sendEachForMulticast).not.toHaveBeenCalled();
+      
+      global.Date = RealDate;
+    });
+
+    test('handles error when sending warning notification', async () => {
+      const RealDate = Date;
+      const now = new RealDate('2026-03-07T12:00:00Z');
+      const sixDaysFromNow = new RealDate('2026-03-13T12:00:00Z');
+
+      global.Date = jest.fn((...args) => {
+        if (args.length === 0) return now;
+        return new RealDate(...args);
+      });
+      global.Date.now = () => now.getTime();
+
+      mockDb.setDocument('groups/group1', {
+        name: 'Warning Group',
+        status: 'frozen',
+        deleteAt: sixDaysFromNow,
+        managers: ['manager@example.com'],
+        // No warningNotificationSent
+      });
+      mockDb.setDocument('users/mgr1', {
+        email: 'manager@example.com',
+        fcmToken: 'mgr-token',
+      });
+
+      // Make sendEachForMulticast throw
+      mockMessaging.sendEachForMulticast.mockRejectedValue(new Error('FCM down'));
+
+      // The function uses sendFcmNotifications which catches the error internally,
+      // but let's test the outer catch by making the update throw
+      const originalUpdate = MockDocumentReference.prototype.update;
+      MockDocumentReference.prototype.update = jest.fn(async function(data) {
+        if (this.path === 'groups/group1' && data.warningNotificationSent) {
+          throw new Error('Update failed');
+        }
+        return originalUpdate.call(this, data);
+      });
+
+      await functions.cleanupFrozenGroups();
+
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining('Error sending warning for group group1'),
+        expect.any(Error)
+      );
+
+      MockDocumentReference.prototype.update = originalUpdate;
+      global.Date = RealDate;
     });
 
     test('handles errors per-group without failing batch', async () => {
-      const now = new Date('2026-03-07T12:00:00Z');
-      jest.spyOn(global, 'Date').mockImplementation(() => now);
+      const RealDate = Date;
+      const now = new RealDate('2026-03-07T12:00:00Z');
+      const pastDate = new RealDate('2026-03-01T12:00:00Z');
 
-      const pastDate = new Date('2026-03-01T12:00:00Z');
+      global.Date = jest.fn((...args) => {
+        if (args.length === 0) return now;
+        return new RealDate(...args);
+      });
+      global.Date.now = () => now.getTime();
 
       mockDb.setDocument('groups/group1', {
         name: 'Good Group',
@@ -1444,6 +1954,7 @@ describe('Cloud Functions Test Suite', () => {
 
       // Restore
       MockDocumentReference.prototype.delete = originalDelete;
+      global.Date = RealDate;
     });
   });
 });
