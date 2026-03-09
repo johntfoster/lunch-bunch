@@ -3018,25 +3018,30 @@ function createFuzzyDropdown(container, options, onSelect, placeholder, opts) {
 let allGroupsCache = [];
 
 async function loadAllGroups() {
-  // Query groups where user is a member (subcollection) or a manager (array field)
   const groupIds = new Set();
 
-  // 1. Groups where user is in the members subcollection
-  const memberSnap = await db.collectionGroup('members')
-    .where(firebase.firestore.FieldPath.documentId(), '==', currentUser.uid)
-    .get();
-  memberSnap.forEach(doc => {
-    // path: groups/{groupId}/members/{uid}
-    groupIds.add(doc.ref.parent.parent.id);
-  });
-
-  // 2. Groups where user's email is in the managers array
+  // 1. Get groups where user is a manager
   const managerSnap = await db.collection('groups')
     .where('managers', 'array-contains', currentUser.email)
     .get();
   managerSnap.forEach(doc => {
     groupIds.add(doc.id);
   });
+
+  // 2. Check user's current selectedGroup if it exists
+  const userDoc = await db.collection('users').doc(currentUser.uid).get();
+  const savedGroup = userDoc.data()?.selectedGroup;
+  if (savedGroup) {
+    try {
+      // Try to read it to verify access
+      const groupDoc = await db.collection('groups').doc(savedGroup).get();
+      if (groupDoc.exists) {
+        groupIds.add(savedGroup);
+      }
+    } catch (e) {
+      // Permission denied - not a member anymore, ignore
+    }
+  }
 
   // Fetch full group docs for all discovered groups
   const groupDocs = await Promise.all(
