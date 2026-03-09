@@ -2516,14 +2516,15 @@ async function verifyMembership() {
 }
 
 async function openSettings() {
-  const mgr = isManager();
-  document.getElementById('managerSettings').style.display = mgr ? 'block' : 'none';
-  if (mgr) {
-    document.getElementById('settingsCloseTime').value = groupSettings.votingCloseTime;
-    updatePendingBadge();
-  }
-  // Load group switcher
-  const groups = await loadAllGroups();
+  try {
+    const mgr = isManager();
+    document.getElementById('managerSettings').style.display = mgr ? 'block' : 'none';
+    if (mgr) {
+      document.getElementById('settingsCloseTime').value = groupSettings.votingCloseTime;
+      updatePendingBadge();
+    }
+    // Load group switcher
+    const groups = await loadAllGroups();
   const container = document.getElementById('settingsGroupDropdown');
   settingsGroupInstance = createFuzzyDropdown(container, groups, async (groupId) => {
     if (groupId === currentGroup) { showToast('Already in this group'); return; }
@@ -2562,11 +2563,15 @@ async function openSettings() {
       showPendingState();
     }
   }, 'Search groups...', { showCreate: true });
-  if (mgr) renderRestaurantMgmt();
-  updateNotifToggles();
-  setNotifStatusMsg('');
-  updateSubscriptionInfo();
-  document.getElementById('settingsOverlay').classList.add('show');
+    if (mgr) renderRestaurantMgmt();
+    updateNotifToggles();
+    setNotifStatusMsg('');
+    updateSubscriptionInfo();
+    document.getElementById('settingsOverlay').classList.add('show');
+  } catch (error) {
+    console.error('[Settings] Error opening settings:', error);
+    showToast('Error loading settings. Please try again.');
+  }
 }
 
 async function updateSubscriptionInfo() {
@@ -2808,15 +2813,21 @@ function closeManageMembers() {
 // Update pending badge count
 async function updatePendingBadge() {
   if (!currentGroup || !isManager()) return;
-  const pendingSnapshot = await db.collection('groups').doc(currentGroup).collection('pendingMembers').get();
   const badge = document.getElementById('pendingBadge');
   if (!badge) return;
   
-  if (pendingSnapshot.empty) {
+  try {
+    const pendingSnapshot = await db.collection('groups').doc(currentGroup).collection('pendingMembers').get();
+    if (pendingSnapshot.empty) {
+      badge.style.display = 'none';
+    } else {
+      badge.textContent = `⏳ ${pendingSnapshot.size}`;
+      badge.style.display = 'inline-block';
+    }
+  } catch (error) {
+    // Permission denied or group doesn't exist - hide badge
+    console.log('[Pending] Cannot access pending members:', error.code);
     badge.style.display = 'none';
-  } else {
-    badge.textContent = `⏳ ${pendingSnapshot.size}`;
-    badge.style.display = 'inline-block';
   }
 }
 
