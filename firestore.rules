@@ -54,7 +54,7 @@ service cloud.firestore {
           allow read: if request.auth != null;
           allow create: if request.auth != null && request.auth.uid == userId && isMember(groupId);
           allow update: if request.auth != null && request.auth.uid == userId && isMember(groupId);
-          allow delete: if false;
+          allow delete: if request.auth != null && request.auth.uid == userId && isMember(groupId);
         }
 
         // Daily extras: readable by anyone, writable by members

@@ -2494,8 +2494,36 @@ async function castVote(restaurantId, restaurantName) {
     return;
   }
 
-  const isChangingVote = !!userVote;
   const today = getCSTDateString();
+
+  // If tapping the restaurant they already voted for → remove vote
+  if (userVote && userVote.restaurantId === restaurantId) {
+    try {
+      await db.collection('groups').doc(currentGroup)
+        .collection('votes').doc(today)
+        .collection('ballots').doc(currentUser.uid)
+        .delete();
+
+      // If this was a daily extra and no one else voted for it, remove the extra
+      const isDailyExtra = dailyExtras.find(e => e.id === restaurantId);
+      if (isDailyExtra) {
+        const remainingVotes = (voteCounts[restaurantName] || 0) - 1;
+        if (remainingVotes <= 0) {
+          await db.collection('groups').doc(currentGroup)
+            .collection('votes').doc(today)
+            .collection('extras').doc(restaurantId)
+            .delete();
+        }
+      }
+
+      showToast('Vote removed! ↩️');
+    } catch (e) {
+      showToast('Error removing vote: ' + e.message);
+    }
+    return;
+  }
+
+  const isChangingVote = !!userVote;
   
   try {
     await db.collection('groups').doc(currentGroup)
