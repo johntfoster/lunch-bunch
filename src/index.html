@@ -1734,7 +1734,10 @@ async function googleSignIn() {
   // Native Capacitor: use native Google sign-in via @capacitor-firebase/authentication
   if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     try {
-      const result = await Capacitor.Plugins.FirebaseAuthentication.signInWithGoogle();
+      // skipNativeAuth: true keeps all auth state in the web SDK
+      const result = await Capacitor.Plugins.FirebaseAuthentication.signInWithGoogle({
+        skipNativeAuth: true
+      });
       const credential = firebase.auth.GoogleAuthProvider.credential(result.credential.idToken);
       await auth.signInWithCredential(credential);
     } catch (error) {
@@ -1759,7 +1762,12 @@ async function appleSignIn() {
   if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     try {
       console.log('[Apple] Starting native Apple sign-in...');
-      const result = await Capacitor.Plugins.FirebaseAuthentication.signInWithApple();
+      // skipNativeAuth: true prevents the native Firebase SDK from consuming
+      // the nonce. We sign in via the web SDK instead so auth state stays
+      // consistent with the rest of the app.
+      const result = await Capacitor.Plugins.FirebaseAuthentication.signInWithApple({
+        skipNativeAuth: true
+      });
       console.log('[Apple] Got Apple credential:', {
         hasIdToken: !!result.credential.idToken,
         hasNonce: !!result.credential.nonce,
